@@ -27,14 +27,98 @@
 #define SHARE_NMT_MEMTRACKER_INLINE_HPP
 
 #include "nmt/memTracker.hpp"
+#include "nmt/nMemLimit.hpp"
+#include "nmt/mallocTracker.hpp"
+#include "nmt/mallocLimit.hpp"
+#include "nmt/virtualMemoryTracker.hpp"
+#include "nmt/virtualMemoryLimit.hpp"
+#include "utilities/globalDefinitions.hpp"
+#include "nmt/nMemoryLimitPrinter.hpp"
 
-#include "nmt/mallocTracker.inline.hpp"
+// Returns true if allocating s bytes on f would trigger either global or the category limit
+inline bool MallocMemorySummary::check_exceeds_limit(size_t s, MemTag mem_tag) {
+  // Note: checks are ordered to have as little impact as possible on the standard code path,
+  // when MallocLimit is unset, resp. it is set but we have reached no limit yet.
+  // Somewhat expensive are:
+  // - as_snapshot()->total(), total malloc load (requires iteration over arena types)
+  // - VMError::is_error_reported() is a load from a volatile.
+  if (MallocLimitHandler::have_limit()) {
 
-inline bool MemTracker::check_exceeds_limit(size_t s, MemTag mem_tag) {
+    // Global Limit ?
+    const nmMemlimit* l = MallocLimitHandler::global_limit();
+    if (l->sz > 0) {
+      size_t so_far = as_snapshot()->total();
+      if ((so_far + s) > l->sz) { // hit the limit
+        return NMemoryLimitPrinter::total_limit_reached(s, so_far, l, NMemType::Malloc);
+      }
+    } else {
+      // Category Limit?
+      l = MallocLimitHandler::category_limit(mem_tag);
+      if (l->sz > 0) {
+        const MallocMemory* mm = as_snapshot()->by_tag(mem_tag);
+        size_t so_far = mm->malloc_size() + mm->arena_size();
+        if ((so_far + s) > l->sz) {
+          return category_limit_reached(mem_tag, s, so_far, l);
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+// Returns true if allocating s bytes on f would trigger either global or the category limit
+inline bool VirtualMemorySummary::check_exceeds_limit(size_t s, MemTag mem_tag) {
+  // Note: checks are ordered to have as little impact as possible on the standard code path,
+  // when MallocLimit is unset, resp. it is set but we have reached no limit yet.
+  // Somewhat expensive are:
+  // - as_snapshot()->total(), total malloc load (requires iteration over arena types)
+  // - VMError::is_error_reported() is a load from a volatile.
+  if (VirtualMemoryLimitHanlder::have_limit()) { // TODO: update to
+
+    // Global Limit ?
+    const nmMemlimit* l = VirtualMemoryLimitHanlder::global_limit();
+    if (l->sz > 0) {
+      size_t so_far = VirtualMemorySummary::as_snapshot()->total_committed();
+      if ((so_far + s) > l->sz) { // hit the limit
+        return NMemoryLimitPrinter::total_limit_reached(s, so_far, l, NMemType::MMap);
+      }
+    } else {
+      // Category Limit?
+      l = VirtualMemoryLimitHanlder::category_limit(mem_tag);
+      if (l->sz > 0) {
+        const VirtualMemory* mm = VirtualMemorySummary::as_snapshot()->by_tag(mem_tag);
+        size_t so_far = mm->committed();
+        if ((so_far + s) > l->sz) {
+          return MallocMemorySummary::category_limit_reached(mem_tag, s, so_far, l); // TODO: change
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+inline bool MallocTracker::check_exceeds_limit(size_t s, MemTag mem_tag) {
+  return MallocMemorySummary::check_exceeds_limit(s, mem_tag);
+}
+
+inline bool VirtualMemoryTracker::check_exceeds_limit(size_t s, MemTag mem_tag) {
+  return VirtualMemorySummary::check_exceeds_limit(s, mem_tag);
+}
+
+inline bool MemTracker::check_exceeds_limit(size_t s, MemTag mem_tag, NMemType type) {
   if (!enabled()) {
     return false;
   }
-  return MallocTracker::check_exceeds_limit(s, mem_tag);
+
+  if (NMemType::Malloc == type) {
+    return MallocTracker::check_exceeds_limit(s, mem_tag);
+  } else if (NMemType::MMap == type) {
+    return VirtualMemoryTracker::check_exceeds_limit(s, mem_tag);
+  } else {
+    ShouldNotReachHere();
+  }
 }
 
 #endif // SHARE_NMT_MEMTRACKER_INLINE_HPP

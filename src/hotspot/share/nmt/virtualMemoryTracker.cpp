@@ -585,7 +585,6 @@ bool VirtualMemoryTracker::split_reserved_region(address addr, size_t size, size
   return true;
 }
 
-
 // Iterate the range, find committed region within its bound.
 class RegionIterator : public StackObj {
 private:

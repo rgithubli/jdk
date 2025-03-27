@@ -100,7 +100,7 @@ void MallocMemorySummary::initialize() {
   MallocLimitHandler::initialize(MallocLimit);
 }
 
-bool MallocMemorySummary::total_limit_reached(size_t s, size_t so_far, const malloclimit* limit) {
+bool MallocMemorySummary::total_limit_reached(size_t s, size_t so_far, const nmMemlimit* limit) { // TODO: mmap needs to have the same
 
 #define FORMATTED \
   "MallocLimit: reached global limit (triggering allocation size: " PROPERFMT ", allocated so far: " PROPERFMT ", limit: " PROPERFMT ") ", \
@@ -117,7 +117,7 @@ bool MallocMemorySummary::total_limit_reached(size_t s, size_t so_far, const mal
     return false;
   }
 
-  if (limit->mode == MallocLimitMode::trigger_fatal) {
+  if (limit->mode == NMemLimitMode::trigger_fatal) {
     fatal(FORMATTED);
   } else {
     log_warning(nmt)(FORMATTED);
@@ -127,7 +127,7 @@ bool MallocMemorySummary::total_limit_reached(size_t s, size_t so_far, const mal
   return true;
 }
 
-bool MallocMemorySummary::category_limit_reached(MemTag mem_tag, size_t s, size_t so_far, const malloclimit* limit) {
+bool MallocMemorySummary::category_limit_reached(MemTag mem_tag, size_t s, size_t so_far, const nmMemlimit* limit) { // TODO: need for mmap
 
 #define FORMATTED \
   "MallocLimit: reached category \"%s\" limit (triggering allocation size: " PROPERFMT ", allocated so far: " PROPERFMT ", limit: " PROPERFMT ") ", \
@@ -144,7 +144,7 @@ bool MallocMemorySummary::category_limit_reached(MemTag mem_tag, size_t s, size_
     return false;
   }
 
-  if (limit->mode == MallocLimitMode::trigger_fatal) {
+  if (limit->mode == NMemLimitMode::trigger_fatal) {
     fatal(FORMATTED);
   } else {
     log_warning(nmt)(FORMATTED);

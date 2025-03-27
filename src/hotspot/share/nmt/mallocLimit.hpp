@@ -23,59 +23,44 @@
  *
  */
 
-#ifndef SHARE_SERVICES_MALLOCLIMIT_HPP
-#define SHARE_SERVICES_MALLOCLIMIT_HPP
+#ifndef SHARE_NMT_MALLOCLIMIT_HPP
+#define SHARE_NMT_MALLOCLIMIT_HPP
 
+#include "nmt/nMemLimit.hpp"
 #include "memory/allStatic.hpp"
 #include "nmt/memTag.hpp"
 #include "utilities/debug.hpp"
 #include "utilities/globalDefinitions.hpp"
 
-enum class MallocLimitMode {
-  trigger_fatal = 0,
-  trigger_oom   = 1
-};
 
-struct malloclimit {
-  size_t sz;            // Limit size
-  MallocLimitMode mode; // Behavior flags
-};
+// struct malloclimit { // TODO: can be shared
+//   size_t sz;            // Limit size
+//   NMemLimitMode mode; // Behavior flags
+// };
 
 // forward declaration
-class outputStream;
+class outputStream; // TODO: why?
 
-class MallocLimitSet {
-  malloclimit _glob;                    // global limit
-  malloclimit _cat[mt_number_of_tags]; // per-category limit
-public:
-  MallocLimitSet();
+// class MallocLimitSet { // TODO: can be shared
+//   malloclimit _glob;                    // global limit
+//   malloclimit _cat[mt_number_of_tags]; // per-category limit
+// public:
+//   MallocLimitSet();
 
-  void reset();
-  bool parse_malloclimit_option(const char* optionstring, const char** err);
+//   void reset();
+//   bool parse_n_mem_limit_option(const char* optionstring, const char** err);
 
-  void set_global_limit(size_t s, MallocLimitMode type);
-  void set_category_limit(MemTag mem_tag, size_t s, MallocLimitMode mode);
+//   void set_global_limit(size_t s, NMemLimitMode type);
+//   void set_category_limit(MemTag mem_tag, size_t s, NMemLimitMode mode);
 
-  const malloclimit* global_limit() const             { return &_glob; }
-  const malloclimit* category_limit(MemTag mem_tag) const { return &_cat[(int)mem_tag]; }
+//   const malloclimit* global_limit() const             { return &_glob; }
+//   const malloclimit* category_limit(MemTag mem_tag) const { return &_cat[(int)mem_tag]; }
 
-  void print_on(outputStream* st) const;
+//   void print_on(outputStream* st) const;
+// };
+
+class MallocLimitHandler : public NMemLimitHandler { // TODO: need to be differed between malloc vs mmap
+
 };
 
-class MallocLimitHandler : public AllStatic {
-  static MallocLimitSet _limits;
-  static bool _have_limit; // shortcut
-
-public:
-
-  static const malloclimit* global_limit()             { return _limits.global_limit(); }
-  static const malloclimit* category_limit(MemTag mem_tag) { return _limits.category_limit(mem_tag); }
-
-  static void initialize(const char* options);
-  static void print_on(outputStream* st);
-
-  // True if there is any limit established
-  static bool have_limit() { return _have_limit; }
-};
-
-#endif // SHARE_SERVICES_MALLOCLIMIT_HPP
+#endif // SHARE_NMT_MALLOCLIMIT_HPP
