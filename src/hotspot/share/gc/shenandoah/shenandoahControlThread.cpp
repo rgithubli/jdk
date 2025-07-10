@@ -150,6 +150,7 @@ void ShenandoahControlThread::run_service() {
       // If GC was requested, we better dump freeset data for performance debugging
       heap->free_set()->log_status_under_lock();
 
+      heap->print_before_gc();
       switch (mode) {
         case concurrent_normal:
           service_concurrent_normal_cycle(cause);
@@ -163,6 +164,7 @@ void ShenandoahControlThread::run_service() {
         default:
           ShouldNotReachHere();
       }
+      heap->print_after_gc();
 
       // If this was the requested GC cycle, notify waiters about it
       if (is_gc_requested) {
@@ -309,6 +311,9 @@ void ShenandoahControlThread::service_concurrent_normal_cycle(GCCause::Cause cau
   TraceCollectorStats tcs(heap->monitoring_support()->concurrent_collection_counters());
 
   ShenandoahConcurrentGC gc(heap->global_generation(), false);
+
+  heap->print_before_gc();
+
   if (gc.collect(cause)) {
     // Cycle is complete.  There were no failed allocation requests and no degeneration, so count this as good progress.
     heap->notify_gc_progress();
@@ -320,6 +325,8 @@ void ShenandoahControlThread::service_concurrent_normal_cycle(GCCause::Cause cau
     check_cancellation_or_degen(gc.degen_point());
     heap->log_heap_status("At end of cancelled GC");
   }
+
+  heap->print_after_gc();
 }
 
 bool ShenandoahControlThread::check_cancellation_or_degen(ShenandoahGC::ShenandoahDegenPoint point) {
@@ -350,7 +357,9 @@ void ShenandoahControlThread::service_stw_full_cycle(GCCause::Cause cause) {
   ShenandoahGCSession session(cause, heap->global_generation());
 
   ShenandoahFullGC gc;
+  heap->print_before_gc();
   gc.collect(cause);
+  heap->print_after_gc();
 }
 
 void ShenandoahControlThread::service_stw_degenerated_cycle(GCCause::Cause cause, ShenandoahGC::ShenandoahDegenPoint point) {
@@ -359,7 +368,10 @@ void ShenandoahControlThread::service_stw_degenerated_cycle(GCCause::Cause cause
   ShenandoahGCSession session(cause, heap->global_generation());
 
   ShenandoahDegenGC gc(point, heap->global_generation());
+
+  heap->print_before_gc();
   gc.collect(cause);
+  heap->print_after_gc();
 }
 
 void ShenandoahControlThread::request_gc(GCCause::Cause cause) {

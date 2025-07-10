@@ -250,6 +250,7 @@ void ShenandoahGenerationalControlThread::run_gc_cycle(const ShenandoahGCRequest
     // Cannot uncommit bitmap slices during concurrent reset
     ShenandoahNoUncommitMark forbid_region_uncommit(_heap);
 
+    _heap->print_before_gc();
     switch (gc_mode()) {
       case concurrent_normal: {
         service_concurrent_normal_cycle(request);
@@ -271,6 +272,7 @@ void ShenandoahGenerationalControlThread::run_gc_cycle(const ShenandoahGCRequest
       default:
         ShouldNotReachHere();
     }
+    _heap->print_after_gc();
   }
 
   // If this cycle completed successfully, notify threads waiting for gc
@@ -384,6 +386,7 @@ void ShenandoahGenerationalControlThread::process_phase_timings() const {
 //
 void ShenandoahGenerationalControlThread::service_concurrent_normal_cycle(const ShenandoahGCRequest& request) {
   log_info(gc, ergo)("Start GC cycle (%s)", request.generation->name());
+
   if (request.generation->is_old()) {
     service_concurrent_old_cycle(request);
   } else {
@@ -397,7 +400,7 @@ void ShenandoahGenerationalControlThread::service_concurrent_old_cycle(const She
   ShenandoahOldGeneration::State original_state = old_generation->state();
 
   TraceCollectorStats tcs(_heap->monitoring_support()->concurrent_collection_counters());
-
+  _heap->print_before_gc();
   switch (original_state) {
     case ShenandoahOldGeneration::FILLING: {
       ShenandoahGCSession session(request.cause, old_generation);
@@ -466,6 +469,7 @@ void ShenandoahGenerationalControlThread::service_concurrent_old_cycle(const She
     default:
       fatal("Unexpected state for old GC: %s", ShenandoahOldGeneration::state_name(old_generation->state()));
   }
+  _heap->print_after_gc();
 }
 
 bool ShenandoahGenerationalControlThread::resume_concurrent_old_cycle(ShenandoahOldGeneration* generation, GCCause::Cause cause) {
@@ -547,6 +551,7 @@ void ShenandoahGenerationalControlThread::service_concurrent_cycle(ShenandoahGen
   assert(!generation->is_old(), "Old GC takes a different control path");
 
   ShenandoahConcurrentGC gc(generation, do_old_gc_bootstrap);
+  _heap->print_before_gc();
   if (gc.collect(cause)) {
     // Cycle is complete
     _heap->notify_gc_progress();
@@ -555,6 +560,7 @@ void ShenandoahGenerationalControlThread::service_concurrent_cycle(ShenandoahGen
     assert(_heap->cancelled_gc(), "Must have been cancelled");
     check_cancellation_or_degen(gc.degen_point());
   }
+  _heap->print_after_gc();
 
   const char* msg;
   ShenandoahMmuTracker* mmu_tracker = _heap->mmu_tracker();
@@ -617,8 +623,10 @@ void ShenandoahGenerationalControlThread::service_stw_full_cycle(GCCause::Cause 
   ShenandoahGCSession session(cause, _heap->global_generation());
   maybe_set_aging_cycle();
   ShenandoahFullGC gc;
+  _heap->print_before_gc();
   gc.collect(cause);
   _degen_point = ShenandoahGC::_degenerated_unset;
+  _heap->print_after_gc();
 }
 
 void ShenandoahGenerationalControlThread::service_stw_degenerated_cycle(const ShenandoahGCRequest& request) {
@@ -627,7 +635,9 @@ void ShenandoahGenerationalControlThread::service_stw_degenerated_cycle(const Sh
   ShenandoahGCSession session(request.cause, request.generation);
 
   ShenandoahDegenGC gc(_degen_point, request.generation);
+  _heap->print_before_gc();
   gc.collect(request.cause);
+  _heap->print_after_gc();
   _degen_point = ShenandoahGC::_degenerated_unset;
 
   assert(_heap->young_generation()->task_queues()->is_empty(), "Unexpected young generation marking tasks");
