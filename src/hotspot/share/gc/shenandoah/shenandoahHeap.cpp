@@ -579,20 +579,41 @@ ShenandoahHeap::ShenandoahHeap(ShenandoahCollectorPolicy* policy) :
 #endif
 
 void ShenandoahHeap::print_heap_on(outputStream* st) const {
-  st->print_cr("Shenandoah Heap");
-  st->print_cr(" %zu%s max, %zu%s soft max, %zu%s committed, %zu%s used",
-               byte_size_in_proper_unit(max_capacity()), proper_unit_for_byte_size(max_capacity()),
-               byte_size_in_proper_unit(soft_max_capacity()), proper_unit_for_byte_size(soft_max_capacity()),
-               byte_size_in_proper_unit(committed()),    proper_unit_for_byte_size(committed()),
-               byte_size_in_proper_unit(used()),         proper_unit_for_byte_size(used()));
-  st->print_cr(" %zu x %zu %s regions",
-               num_regions(),
-               byte_size_in_proper_unit(ShenandoahHeapRegion::region_size_bytes()),
-               proper_unit_for_byte_size(ShenandoahHeapRegion::region_size_bytes()));
+  bool is_generational = mode()->is_generational();
+  if (is_generational) {
+    st->print_cr("Generational Shenandoah Heap");
+  } else {
+    st->print_cr("Shenandoah Heap");
+  }
+
+  if (is_generational) {
+    st->print_cr(" Young:");
+    st->print_cr("  %zu%s max, %zu%s soft max, %zu%s used",
+            byte_size_in_proper_unit(young_generation()->max_capacity()), proper_unit_for_byte_size(young_generation()->max_capacity()),
+            byte_size_in_proper_unit(soft_max_capacity()), proper_unit_for_byte_size(soft_max_capacity()),
+            // byte_size_in_proper_unit(young_generation()->committed()),    proper_unit_for_byte_size(young_generation()->committed()), // TODO: no committed available for generation
+            byte_size_in_proper_unit(young_generation()->used()),         proper_unit_for_byte_size(young_generation()->used()));
+    st->print_cr(" Old:");
+    st->print_cr("  %zu%s max, %zu%s soft max, %zu%s used",
+            byte_size_in_proper_unit(old_generation()->max_capacity()), proper_unit_for_byte_size(old_generation()->max_capacity()),
+            byte_size_in_proper_unit(soft_max_capacity()), proper_unit_for_byte_size(soft_max_capacity()),
+            // byte_size_in_proper_unit(old_generation()->committed()),    proper_unit_for_byte_size(old_generation()->committed()), // TODO: no committed available for generation
+            byte_size_in_proper_unit(old_generation()->used()),         proper_unit_for_byte_size(old_generation()->used()));
+  } else {
+    st->print_cr(" %zu%s max, %zu%s soft max, %zu%s committed, %zu%s used",
+                byte_size_in_proper_unit(max_capacity()), proper_unit_for_byte_size(max_capacity()),
+                byte_size_in_proper_unit(soft_max_capacity()), proper_unit_for_byte_size(soft_max_capacity()),
+                byte_size_in_proper_unit(committed()),    proper_unit_for_byte_size(committed()),
+                byte_size_in_proper_unit(used()),         proper_unit_for_byte_size(used()));
+    st->print_cr(" %zu x %zu %s regions",
+                num_regions(),
+                byte_size_in_proper_unit(ShenandoahHeapRegion::region_size_bytes()),
+                proper_unit_for_byte_size(ShenandoahHeapRegion::region_size_bytes()));
+  }
 
   st->print("Status: ");
   if (has_forwarded_objects())                 st->print("has forwarded objects, ");
-  if (!mode()->is_generational()) {
+  if (!is_generational) {
     if (is_concurrent_mark_in_progress())      st->print("marking,");
   } else {
     if (is_concurrent_old_mark_in_progress())    st->print("old marking, ");
