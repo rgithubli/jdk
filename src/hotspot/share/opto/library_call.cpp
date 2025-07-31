@@ -60,6 +60,7 @@
 #include "runtime/stubRoutines.hpp"
 #include "utilities/macros.hpp"
 #include "utilities/powerOfTwo.hpp"
+#include "utilities/myThrowable.hpp"
 
 //---------------------------make_vm_intrinsic----------------------------
 CallGenerator* Compile::make_vm_intrinsic(ciMethod* m, bool is_virtual) {
@@ -238,6 +239,7 @@ bool LibraryCallKit::try_to_inline(int predicate) {
   case vmIntrinsics::_hashCode:                 return inline_native_hashcode(intrinsic()->is_virtual(), !is_static);
   case vmIntrinsics::_identityHashCode:         return inline_native_hashcode(/*!virtual*/ false,         is_static);
   case vmIntrinsics::_getClass:                 return inline_native_getClass();
+  case vmIntrinsics::_fillInStacktrace:         return inline_fillInStacktrace();
 
   case vmIntrinsics::_ceil:
   case vmIntrinsics::_floor:
@@ -4857,6 +4859,14 @@ bool LibraryCallKit::inline_native_getClass() {
   Node* obj = null_check_receiver();
   if (stopped())  return true;
   set_result(load_mirror_from_klass(load_object_klass(obj)));
+  return true;
+}
+
+bool LibraryCallKit::inline_fillInStacktrace() {
+  ciMethod* method = callee();
+  const TypeFunc* tf = TypeFunc::make(method);
+
+  set_result(new CallLeafPureNode(tf, CAST_FROM_FN_PTR(address, Java_java_lang_MyThrowable_fillInStackTrace), "fillInStacktrace", TypePtr::BOTTOM));
   return true;
 }
 
