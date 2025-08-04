@@ -97,8 +97,6 @@ private:
 };
 
 typedef const TypeFunc*(*TypeFunc_generator)();
-// TODO: Really? Declare it here?
-extern "C" jstring Java_java_lang_MyThrowable_fillInStackTrace(JNIEnv *env, jobject throwable, jstring str);
 
 class OptoRuntime : public AllStatic {
   friend class Matcher;  // allow access to stub names

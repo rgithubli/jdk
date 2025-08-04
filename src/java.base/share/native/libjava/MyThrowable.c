@@ -44,7 +44,7 @@
  * `this' so you can write 'throw e.fillInStackTrace();'
  */
 JNIEXPORT void JNICALL
-Java_java_lang_MyThrowable_fillInStackTrace(JNIEnv *env, jclass ignored)
+Java_java_lang_MyThrowable_fillInStackTrace(JNIEnv *env, jclass ignored, jint dummy)
 {
     // sleep(1);
     return;

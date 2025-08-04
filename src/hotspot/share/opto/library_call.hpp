@@ -298,7 +298,6 @@ class LibraryCallKit : public GraphKit {
   // Helper function for inlining native object hash method
   bool inline_native_hashcode(bool is_virtual, bool is_static);
   bool inline_native_getClass();
-  bool inline_fillInStacktrace();
 
   // Helper functions for inlining arraycopy
   bool inline_arraycopy();

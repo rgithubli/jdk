@@ -33,8 +33,6 @@
 #include "opto/replacednodes.hpp"
 #include "opto/type.hpp"
 #include "utilities/growableArray.hpp"
-extern "C" jstring Java_java_lang_MyThrowable_fillInStackTrace(JNIEnv *env, jobject throwable, jstring str);
-
 
 // Portions of code courtesy of Clifford Click
 
