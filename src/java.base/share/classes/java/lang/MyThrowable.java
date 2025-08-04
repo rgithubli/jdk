@@ -40,7 +40,7 @@ public class MyThrowable {
  * comment
  */
   public MyThrowable() {
-    fillInStackTrace(); // TODO: can we just use the native method?
+    fillInStackTrace(1); // TODO: can we just use the native method?
   }
 
 /**
@@ -53,13 +53,14 @@ public class MyThrowable {
 
 /**
  * comment
+ * @param dummy dummy
  */
-  public static void fillInStackTrace() {
+  public static void fillInStackTrace(int dummy) {
     System.out.println("filling stacktrace..."); // TODO: why doesn't it print things to the screen?
     fillInStackTrace();
     System.out.println("Done");
   }
 
   @IntrinsicCandidate
-  private static native void fillInStackTrace(int dummy);
+  private static native void fillInStackTrace();
 }

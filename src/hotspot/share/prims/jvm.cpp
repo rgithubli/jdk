@@ -501,6 +501,11 @@ JVM_ENTRY(void, JVM_FillInStackTrace(JNIEnv *env, jobject receiver))
   java_lang_Throwable::fill_in_stack_trace(exception);
 JVM_END
 
+
+JVM_ENTRY_NO_ENV(void, JVM_MyThrowable_FillInStackTrace())
+  java_lang_MyThrowable::fill_in_stack_trace();
+JVM_END
+
 // java.lang.NullPointerException ///////////////////////////////////////////
 
 JVM_ENTRY(jstring, JVM_GetExtendedNPEMessage(JNIEnv *env, jthrowable throwable))

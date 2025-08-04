@@ -695,6 +695,11 @@ class java_lang_Throwable: AllStatic {
 };
 
 
+class java_lang_MyThrowable: AllStatic {
+ public:
+  static void fill_in_stack_trace();
+};
+
 // Interface to java.lang.reflect.AccessibleObject objects
 
 class java_lang_reflect_AccessibleObject: AllStatic {

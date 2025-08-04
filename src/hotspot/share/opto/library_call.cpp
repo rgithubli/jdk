@@ -4864,8 +4864,8 @@ bool LibraryCallKit::inline_native_getClass() {
 bool LibraryCallKit::inline_fillInStacktrace() {
   ciMethod* method = callee();
   const TypeFunc* tf = TypeFunc::make(method);
-  set_result(new CallLeafPureNode(tf, CAST_FROM_FN_PTR(address, Java_java_lang_MyThrowable_fillInStackTrace), "fillInStacktrace", TypePtr::BOTTOM));
-  return true;  
+  set_result(new CallLeafPureNode(tf, CAST_FROM_FN_PTR(address, SharedRuntime::myThrowable_fillInStacktrace), "fillInStacktrace", TypePtr::BOTTOM));
+  return true;
 }
 
 //-----------------inline_native_Reflection_getCallerClass---------------------

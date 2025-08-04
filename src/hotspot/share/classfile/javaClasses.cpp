@@ -3139,6 +3139,10 @@ void java_lang_StackTraceElement::fill_in(Handle element,
   }
 }
 
+void java_lang_MyThrowable::fill_in_stack_trace() {
+  // do nothing
+}
+
 void java_lang_StackTraceElement::decode_file_and_line(Handle java_class,
                                                        InstanceKlass* holder,
                                                        int version,

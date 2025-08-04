@@ -1756,6 +1756,10 @@ address SharedRuntime::handle_unsafe_access(JavaThread* thread, address next_pc)
   return next_pc;
 }
 
+address SharedRuntime::myThrowable_fillInStacktrace() {
+  return CAST_FROM_FN_PTR(address, &java_lang_MyThrowable::fill_in_stack_trace);
+}
+
 #ifdef ASSERT
 void SharedRuntime::check_member_name_argument_is_last_argument(const methodHandle& method,
                                                                 const BasicType* sig_bt,

@@ -575,6 +575,7 @@ class SharedRuntime: AllStatic {
   static address handle_wrong_method_ic_miss(JavaThread* current);
 
   static address handle_unsafe_access(JavaThread* thread, address next_pc);
+  static address myThrowable_fillInStacktrace();
 
 #ifndef PRODUCT
 

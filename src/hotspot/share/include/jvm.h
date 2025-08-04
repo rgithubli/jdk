@@ -227,6 +227,10 @@ JVM_NeedsClassInitBarrierForCDS(JNIEnv* env, jclass cls);
 JNIEXPORT void JNICALL
 JVM_FillInStackTrace(JNIEnv *env, jobject throwable);
 
+
+JNIEXPORT void JNICALL
+JVM_MyThrowable_FillInStackTrace();
+
 /*
  * java.lang.StackTraceElement
  */
