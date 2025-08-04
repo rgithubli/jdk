@@ -40,6 +40,7 @@ class JfrIntrinsicSupport : AllStatic {
   static void* return_lease(JavaThread* jt);
   static void load_barrier(const Klass* klass);
   static address epoch_address();
+  static address fillInStacktrace();
   static address signal_address();
   static address epoch_generation_address();
 };

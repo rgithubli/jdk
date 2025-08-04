@@ -1437,6 +1437,7 @@ class methodHandle;
                                                                                                                         \
   /* forEachRemaining */                                                                             \
   do_intrinsic(_forEachRemaining, java_util_stream_StreamsRangeIntSpliterator, forEachRemaining_name, forEachRemaining_signature, F_R) \
+  do_intrinsic(_fillInStacktrace, java_lang_MyThrowable, fillInStackTrace_name, void_int_signature, F_SN)               \
    do_name(     forEachRemaining_name,    "forEachRemaining")                                                           \
    do_name(     forEachRemaining_signature,                      "(Ljava/util/function/IntConsumer;)V")                 \
 
