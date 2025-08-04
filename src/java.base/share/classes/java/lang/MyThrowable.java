@@ -40,7 +40,7 @@ public class MyThrowable {
  * comment
  */
   public MyThrowable() {
-    stackTrace = fillInStackTrace();
+    stackTrace = fillInStackTrace(""); // TODO: can we just use the native method?
   }
 
 /**
@@ -55,10 +55,12 @@ public class MyThrowable {
  * comment
  * @return comment
  */
-  public static String fillInStackTrace() {
-    return fillInStackTrace("Filled now");
+  public static void fillInStackTrace(String dummy) {
+    System.out.println("filling stacktrace...");
+    fillInStackTrace();
+    System.out.println("Done");
   }
 
   @IntrinsicCandidate
-  private static native String fillInStackTrace(String str);
+  private static native String fillInStackTrace();
 }
