@@ -44,7 +44,7 @@ public class MyThrowableTest {
     }
 
     @Test
-    @IR(failOn = IRNode.CALL)
+    @IR(failOn = {IRNode.CALL_OF, ".*"})
     static void testDead() {
         new MyThrowable();
     }

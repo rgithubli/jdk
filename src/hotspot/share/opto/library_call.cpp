@@ -4868,7 +4868,7 @@ bool LibraryCallKit::inline_fillInStacktrace() {
   // Surprisingly, the test works even without RC_PURE! Check the generated code.
   //  Node* call = make_runtime_call(RC_LEAF | RC_PURE,
 
-  Node* call = make_runtime_call(RC_LEAF,
+  Node* call = make_runtime_call(RC_PURE,
                                  tf,
                                  CAST_FROM_FN_PTR(address, &java_lang_MyThrowable::fill_in_stack_trace),
                                  "fillInStacktrace",
