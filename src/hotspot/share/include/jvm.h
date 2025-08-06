@@ -228,7 +228,7 @@ JNIEXPORT void JNICALL
 JVM_FillInStackTrace(JNIEnv *env, jobject throwable);
 
 
-JNIEXPORT void JNICALL
+JNIEXPORT jint JNICALL
 JVM_MyThrowable_FillInStackTrace();
 
 /*

@@ -34,30 +34,31 @@ import jdk.internal.event.ThrowableTracer;
  * comment
  */
 public class MyThrowable {
-  private String stackTrace = "UNASSIGNED_STACK";
+  private int stackTrace = 0;
 
-/**
- * comment
- */
+  /**
+   * comment
+   */
   public MyThrowable() {
-    fillInStackTrace();
+    stackTrace = fillInStackTrace();
   }
 
-/**
- * comment
- * @return comment
- */
-  public String getStackTrace() {
+  /**
+   * comment
+   * @return comment
+   */
+  public int getStackTrace() {
     return stackTrace;
   }
 
-/**
- * comment
- */
-  @IntrinsicCandidate
-  public static void fillInStackTrace() {
-    fillInStackTrace0();
+  /**
+   * comment
+   * @return comment
+   */
+  // @IntrinsicCandidate
+  public static int fillInStackTrace() {
+    return fillInStackTrace0();
   }
 
-  private static native void fillInStackTrace0();
+  private static native int fillInStackTrace0();
 }

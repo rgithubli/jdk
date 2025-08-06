@@ -502,8 +502,8 @@ JVM_ENTRY(void, JVM_FillInStackTrace(JNIEnv *env, jobject receiver))
 JVM_END
 
 
-JVM_ENTRY_NO_ENV(void, JVM_MyThrowable_FillInStackTrace())
-  java_lang_MyThrowable::fill_in_stack_trace();
+JVM_ENTRY_NO_ENV(jint, JVM_MyThrowable_FillInStackTrace())
+  return java_lang_MyThrowable::fill_in_stack_trace();
 JVM_END
 
 // java.lang.NullPointerException ///////////////////////////////////////////

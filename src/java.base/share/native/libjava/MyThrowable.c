@@ -43,10 +43,8 @@
  * may also be called explicitly by the user.  This routine returns
  * `this' so you can write 'throw e.fillInStackTrace();'
  */
-JNIEXPORT void JNICALL
+JNIEXPORT jint JNICALL
 Java_java_lang_MyThrowable_fillInStackTrace0(JNIEnv *env, jclass ignored)
 {
-    // sleep(1);
-    JVM_MyThrowable_FillInStackTrace();
-    return;
+    return JVM_MyThrowable_FillInStackTrace();
 }
