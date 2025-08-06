@@ -55,7 +55,7 @@ public class MyThrowable {
    * comment
    * @return comment
    */
-  // @IntrinsicCandidate
+  @IntrinsicCandidate
   public static int fillInStackTrace() {
     return fillInStackTrace0();
   }

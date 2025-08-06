@@ -408,6 +408,7 @@ class methodHandle;
   do_intrinsic(_isWhitespace,             java_lang_CharacterDataLatin1, isWhitespace_name, int_bool_signature,  F_R)   \
    do_name(     isWhitespace_name,                                      "isWhitespace")                                 \
                                                                                                                         \
+  do_intrinsic(_fillInStacktrace, java_lang_MyThrowable, fillInStackTrace_name, void_int_signature, F_SN)             \
                                                                                                                         \
   do_intrinsic(_Preconditions_checkIndex, jdk_internal_util_Preconditions, checkIndex_name, Preconditions_checkIndex_signature, F_S)   \
    do_signature(Preconditions_checkIndex_signature,              "(IILjava/util/function/BiFunction;)I")                \
