@@ -238,7 +238,7 @@ bool LibraryCallKit::try_to_inline(int predicate) {
   case vmIntrinsics::_hashCode:                 return inline_native_hashcode(intrinsic()->is_virtual(), !is_static);
   case vmIntrinsics::_identityHashCode:         return inline_native_hashcode(/*!virtual*/ false,         is_static);
   case vmIntrinsics::_getClass:                 return inline_native_getClass();
-  case vmIntrinsics::_fillInStacktrace:         return inline_fillInStacktrace();
+  // case vmIntrinsics::_fillInStacktrace:         return inline_fillInStacktrace();
 
   case vmIntrinsics::_ceil:
   case vmIntrinsics::_floor:
@@ -4861,25 +4861,25 @@ bool LibraryCallKit::inline_native_getClass() {
   return true;
 }
 
-bool LibraryCallKit::inline_fillInStacktrace() {
-  ciMethod* method = callee();
-  const TypeFunc* tf = TypeFunc::make(method);
+// bool LibraryCallKit::inline_fillInStacktrace() {
+//   ciMethod* method = callee();
+//   const TypeFunc* tf = TypeFunc::make(method);
 
-  // Surprisingly, the test works even without RC_PURE! Check the generated code.
-  //  Node* call = make_runtime_call(RC_LEAF | RC_PURE,
+//   // Surprisingly, the test works even without RC_PURE! Check the generated code.
+//   //  Node* call = make_runtime_call(RC_LEAF | RC_PURE,
 
-  Node* call = make_runtime_call(RC_PURE,
-                                 tf,
-                                 CAST_FROM_FN_PTR(address, &java_lang_MyThrowable::fill_in_stack_trace),
-                                 "fillInStacktrace",
-                                 nullptr);
+//   Node* call = make_runtime_call(RC_PURE,
+//                                  tf,
+//                                  CAST_FROM_FN_PTR(address, &java_lang_MyThrowable::fill_in_stack_trace),
+//                                  "fillInStacktrace",
+//                                  nullptr);
 
-  // When you have a return value, it should be hooked somewhat like this:
-  //  Node* value = _gvn.transform(new ProjNode(call, TypeFunc::Parms+0));
-  //  set_result(value);
+//   // When you have a return value, it should be hooked somewhat like this:
+//   //  Node* value = _gvn.transform(new ProjNode(call, TypeFunc::Parms+0));
+//   //  set_result(value);
 
-  return true;
-}
+//   return true;
+// }
 
 //-----------------inline_native_Reflection_getCallerClass---------------------
 // public static native Class<?> sun.reflect.Reflection.getCallerClass();
