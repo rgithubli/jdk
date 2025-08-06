@@ -4875,8 +4875,8 @@ bool LibraryCallKit::inline_fillInStacktrace() {
                                  nullptr);
 
   // When you have a return value, it should be hooked somewhat like this:
-  //  Node* value = _gvn.transform(new ProjNode(call, TypeFunc::Parms+0));
-  //  set_result(value);
+  Node* value = _gvn.transform(new ProjNode(call, TypeFunc::Parms+0));
+  set_result(value);
 
   return true;
 }
