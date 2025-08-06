@@ -4864,7 +4864,20 @@ bool LibraryCallKit::inline_native_getClass() {
 bool LibraryCallKit::inline_fillInStacktrace() {
   ciMethod* method = callee();
   const TypeFunc* tf = TypeFunc::make(method);
-  set_result(new CallLeafPureNode(tf, CAST_FROM_FN_PTR(address, SharedRuntime::myThrowable_fillInStacktrace), "fillInStacktrace", TypePtr::BOTTOM));
+
+  // Surprisingly, the test works even without RC_PURE! Check the generated code.
+  //  Node* call = make_runtime_call(RC_LEAF | RC_PURE,
+
+  Node* call = make_runtime_call(RC_LEAF,
+                                 tf,
+                                 CAST_FROM_FN_PTR(address, &java_lang_MyThrowable::fill_in_stack_trace),
+                                 "fillInStacktrace",
+                                 nullptr);
+
+  // When you have a return value, it should be hooked somewhat like this:
+  //  Node* value = _gvn.transform(new ProjNode(call, TypeFunc::Parms+0));
+  //  set_result(value);
+
   return true;
 }
 

@@ -1,12 +1,10 @@
 /*
- * Copyright (c) 1994, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright Amazon.com Inc. or its affiliates. All Rights Reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.  Oracle designates this
- * particular file as subject to the "Classpath" exception as provided
- * by Oracle in the LICENSE file that accompanied this code.
+ * published by the Free Software Foundation.
  *
  * This code is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -23,41 +21,38 @@
  * questions.
  */
 
-package java.lang;
-
-import java.io.*;
-import java.util.*;
-import jdk.internal.vm.annotation.IntrinsicCandidate;
-import jdk.internal.event.ThrowableTracer;
-
-/**
- * comment
+/*
+ * @test
+ * @requires vm.compiler2.enabled
+ * @library /test/lib /
+ * @run driver compiler.c2.irTests.MyThrowableTest
  */
-public class MyThrowable {
-  private String stackTrace = "UNASSIGNED_STACK";
 
-/**
- * comment
- */
-  public MyThrowable() {
-    fillInStackTrace();
-  }
+package compiler.c2.irTests;
 
-/**
- * comment
- * @return comment
- */
-  public String getStackTrace() {
-    return stackTrace;
-  }
+import compiler.lib.ir_framework.*;
+import jdk.test.lib.Asserts;
 
-/**
- * comment
- */
-  @IntrinsicCandidate
-  public static void fillInStackTrace() {
-    fillInStackTrace0();
-  }
+public class MyThrowableTest {
 
-  private static native void fillInStackTrace0();
+    public static void main(String[] args) {
+        TestFramework.runWithFlags(
+            "-XX:+UnlockExperimentalVMOptions",
+            "-XX:CompileThreshold=100",
+            "-XX:-TieredCompilation"
+        );
+    }
+
+    @Test
+    @IR(failOn = IRNode.CALL)
+    static void testDead() {
+        new MyThrowable();
+    }
+
+    @Test
+    @IR(counts = {IRNode.CALL, ">0"})
+    static Object testNotDead() {
+        return new MyThrowable();
+    }
+
 }

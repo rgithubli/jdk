@@ -860,6 +860,7 @@ bool C2Compiler::is_intrinsic_supported(vmIntrinsics::ID id) {
   case vmIntrinsics::_notifyJvmtiVThreadUnmount:
   case vmIntrinsics::_notifyJvmtiVThreadDisableSuspend:
 #endif
+  case vmIntrinsics::_fillInStacktrace:
     break;
 
   default:
