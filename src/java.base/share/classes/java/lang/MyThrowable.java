@@ -33,30 +33,39 @@ import jdk.internal.event.ThrowableTracer;
 /**
  * comment
  */
-public class MyThrowable {
+public class MyThrowable extends Throwable {
+  @java.io.Serial
+  private static final long serialVersionUID = 5162710283389028792L;
+
   private int stackTrace = 0;
 
   /**
    * comment
    */
   public MyThrowable() {
-    stackTrace = fillInStackTrace();
+    super();
   }
 
-  /**
-   * comment
-   * @return comment
-   */
-  public int getStackTrace() {
-    return stackTrace;
-  }
+  // /**
+  //  * comment
+  //  * @return comment
+  //  */
+  // public int getStackTrace() {
+  //   return stackTrace;
+  // }
 
+  @Override
+  public synchronized Throwable fillInStackTrace() {
+    myFillInStackTrace();
+    return this;
+  }
+  
   /**
    * comment
    * @return comment
    */
   @IntrinsicCandidate
-  public static int fillInStackTrace() {
+  public static int myFillInStackTrace() {
     return fillInStackTrace0();
   }
 
