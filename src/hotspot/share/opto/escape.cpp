@@ -1599,8 +1599,16 @@ void ConnectionGraph::add_node_to_connection_graph(Node *n, Unique_Node_List *de
       break;
     }
     case Op_CreateEx: {
+      // TODO: is ex a var if we do throw new XXException()?
+      // TODO: what node? We used intrinsics for fillInStactrace, which is used in a constructor
+      // We still have a lot of other usages of Op_CreateEx, what's more, usages of Op_Rethrow as well
+      // diff between 
+      // - add_local_var_and_edge vs add_objload_to_connection_graph vs add_local_var? add_objload_to_connection_graph uses add_local_var_and_edge
+      // This is my guess... (No local var, not a object reference, it's a java object. )
+      // IR test failed, even with NoEscape. Tere must be somewhere else creating exception
+      add_java_object(n, PointsToNode::NoEscape);
       // assume that all exception objects globally escape
-      map_ideal_node(n, phantom_obj);
+      // map_ideal_node(n, phantom_obj);
       break;
     }
     case Op_LoadKlass:
@@ -1644,7 +1652,7 @@ void ConnectionGraph::add_node_to_connection_graph(Node *n, Unique_Node_List *de
       }
       break;
     }
-    case Op_Rethrow: // Exception object escapes
+    case Op_Rethrow: // Exception object escapes // TODO: also need to update this? The goal is, as long as the exception / stacktrace isn't escaped, we don't wanna create the exception / stacktrace
     case Op_Return: {
       if (n->req() > TypeFunc::Parms &&
           igvn->type(n->in(TypeFunc::Parms))->isa_oopptr()) {
