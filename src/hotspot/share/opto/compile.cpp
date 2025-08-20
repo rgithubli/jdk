@@ -2471,7 +2471,7 @@ void Compile::Optimize() {
       if (major_progress()) print_method(PHASE_PHASEIDEALLOOP3, 2);
     }
     if (!failing()) {
-      // Verify that last round of loop opts produced a valid graph
+      // Verify that last round of loop opts produced a valid graph 
       PhaseIdealLoop::verify(igvn);
     }
   }

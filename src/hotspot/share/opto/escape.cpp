@@ -1600,12 +1600,10 @@ void ConnectionGraph::add_node_to_connection_graph(Node *n, Unique_Node_List *de
     }
     case Op_CreateEx: {
       // TODO: is ex a var if we do throw new XXException()?
-      // TODO: what node? We used intrinsics for fillInStactrace, which is used in a constructor
       // We still have a lot of other usages of Op_CreateEx, what's more, usages of Op_Rethrow as well
       // diff between 
       // - add_local_var_and_edge vs add_objload_to_connection_graph vs add_local_var? add_objload_to_connection_graph uses add_local_var_and_edge
-      // This is my guess... (No local var, not a object reference, it's a java object. )
-      // IR test failed, even with NoEscape. There must be somewhere else creating exception
+      // Below is my guess (IR test still failed. There must be somewhere else creating exception):
       add_java_object(n, PointsToNode::NoEscape);
       // assume that all exception objects globally escape
       // map_ideal_node(n, phantom_obj);
@@ -1652,7 +1650,14 @@ void ConnectionGraph::add_node_to_connection_graph(Node *n, Unique_Node_List *de
       }
       break;
     }
-    case Op_Rethrow: // Exception object escapes // TODO: also need to update this? The goal is, as long as the exception / stacktrace isn't escaped, we don't wanna create the exception / stacktrace
+    case Op_Rethrow:  {// Exception object escapes // TODO: also need to update this? The goal is, as long as the exception / stacktrace isn't escaped, we don't wanna create the exception / stacktrace
+      if (n->req() > TypeFunc::Parms &&
+          igvn->type(n->in(TypeFunc::Parms))->isa_oopptr()) {
+        // Treat Return value as LocalVar with GlobalEscape escape state.
+        add_local_var_and_edge(n, PointsToNode::NoEscape, n->in(TypeFunc::Parms), delayed_worklist);
+      }
+      break;
+    }
     case Op_Return: {
       if (n->req() > TypeFunc::Parms &&
           igvn->type(n->in(TypeFunc::Parms))->isa_oopptr()) {
@@ -1808,7 +1813,13 @@ void ConnectionGraph::add_final_edges(Node *n) {
       add_local_var_and_edge(n, PointsToNode::NoEscape, n->in(0), nullptr);
       break;
     }
-    case Op_Rethrow: // Exception object escapes
+    case Op_Rethrow: {
+      assert(n->req() > TypeFunc::Parms && _igvn->type(n->in(TypeFunc::Parms))->isa_oopptr(),
+             "Unexpected node type");
+      // Treat Return value as LocalVar with GlobalEscape escape state.
+      add_local_var_and_edge(n, PointsToNode::NoEscape, n->in(TypeFunc::Parms), nullptr);
+      break;
+    } // Exception object escapes
     case Op_Return: {
       assert(n->req() > TypeFunc::Parms && _igvn->type(n->in(TypeFunc::Parms))->isa_oopptr(),
              "Unexpected node type");
