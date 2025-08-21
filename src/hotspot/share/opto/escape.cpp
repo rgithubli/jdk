@@ -1598,11 +1598,11 @@ void ConnectionGraph::add_node_to_connection_graph(Node *n, Unique_Node_List *de
       set_not_scalar_replaceable(ptn_con NOT_PRODUCT(COMMA "Constant pointer"));
       break;
     }
-    case Op_CreateEx: {
-      // assume that all exception objects globally escape
-      map_ideal_node(n, phantom_obj);
-      break;
-    }
+    // case Op_CreateEx: {
+    //   // assume that all exception objects globally escape
+    //   map_ideal_node(n, phantom_obj);
+    //   break;
+    // }
     case Op_LoadKlass:
     case Op_LoadNKlass: {
       // Unknown class is loaded
@@ -1644,7 +1644,7 @@ void ConnectionGraph::add_node_to_connection_graph(Node *n, Unique_Node_List *de
       }
       break;
     }
-    case Op_Rethrow: // Exception object escapes
+    // case Op_Rethrow: // Exception object escapes
     case Op_Return: {
       if (n->req() > TypeFunc::Parms &&
           igvn->type(n->in(TypeFunc::Parms))->isa_oopptr()) {
@@ -1800,7 +1800,7 @@ void ConnectionGraph::add_final_edges(Node *n) {
       add_local_var_and_edge(n, PointsToNode::NoEscape, n->in(0), nullptr);
       break;
     }
-    case Op_Rethrow: // Exception object escapes
+    // case Op_Rethrow: // Exception object escapes
     case Op_Return: {
       assert(n->req() > TypeFunc::Parms && _igvn->type(n->in(TypeFunc::Parms))->isa_oopptr(),
              "Unexpected node type");
