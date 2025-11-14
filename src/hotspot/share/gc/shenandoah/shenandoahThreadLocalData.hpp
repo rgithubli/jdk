@@ -43,7 +43,9 @@
 
 class ShenandoahThreadLocalData {
 private:
+
   char _gc_state;
+  
   // Evacuation OOM state
   uint8_t                 _oom_scope_nesting_level;
   bool                    _oom_during_evac;

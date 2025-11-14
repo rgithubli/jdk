@@ -144,7 +144,7 @@ class Thread: public ThreadShadow {
   // Thread local data area available to the GC. The internal
   // structure and contents of this data area is GC-specific.
   // Only GC and GC barrier code should access this data area.
-  GCThreadLocalData _gc_data;
+  alignas(64) GCThreadLocalData _gc_data;
 
  public:
   static ByteSize gc_data_offset() {
