@@ -1496,7 +1496,7 @@ HeapWord* ShenandoahFreeSet::try_allocate_in(ShenandoahHeapRegion* r, Shenandoah
     return nullptr;
   }
   HeapWord* result = nullptr;
-  r->try_recycle_under_lock();
+  r->try_recycle_under_lock(); // TODO: doesn't it mean that we are already checking immediate trash? - no if before final mark. Final mark gives the knowledge whether
   in_new_region = r->is_empty();
 
   if (in_new_region) {

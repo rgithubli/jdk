@@ -45,6 +45,7 @@ void ShenandoahController::handle_alloc_failure(const ShenandoahAllocRequest& re
   const GCCause::Cause cause = is_humongous ? GCCause::_shenandoah_humongous_allocation_failure : GCCause::_allocation_failure;
 
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
+  // TODO: if we're not yet to final mark
   if (heap->cancel_gc(cause)) {
     log_info(gc)("Failed to allocate %s, " PROPERFMT, req.type_string(), PROPERFMTARGS(req.size() * HeapWordSize));
     request_gc(cause);
