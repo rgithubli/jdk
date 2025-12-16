@@ -405,6 +405,8 @@ public:
 
   inline bool is_stw_gc_in_progress() const;
   inline bool is_concurrent_strong_root_in_progress() const;
+  inline bool is_early_cleanup_done() const;
+
   inline bool is_concurrent_weak_root_in_progress() const;
   bool is_prepare_for_old_mark_in_progress() const;
 

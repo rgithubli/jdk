@@ -114,6 +114,7 @@ void ShenandoahConcurrentGC::entry_concurrent_update_refs_prepare(ShenandoahHeap
 
 bool ShenandoahConcurrentGC::collect(GCCause::Cause cause) {
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
+  heap->set_early_cleanup_done(false); // TODO: move it to somewhere else...
   _generation->ref_processor()->set_soft_reference_policy(
       GCCause::should_clear_all_soft_refs(cause));
 
@@ -249,6 +250,7 @@ bool ShenandoahConcurrentGC::collect(GCCause::Cause cause) {
   // previous GC. This allows us to start the next GC cycle more quickly after a trigger condition is detected,
   // reducing the likelihood that GC will degenerate.
   entry_reset_after_collect();
+  heap->set_early_cleanup_done(false); // TODO: move it to somewhere else...
 
   return true;
 }
@@ -1084,10 +1086,10 @@ void ShenandoahConcurrentGC::op_cleanup_early() {
   ShenandoahWorkerScope scope(ShenandoahHeap::heap()->workers(),
                               ShenandoahWorkerPolicy::calc_workers_for_conc_cleanup(),
                               "cleanup early.");
-  if (ShenandoahHeap::heap()->recycle_trash()) {
-    heap()->set_early_cleanup_done(true); // TODO: reset it to false
-    heap()->control_thread()->notify_alloc_failure_waiters(); // TODO; need this?
-  }
+  ShenandoahHeap* const heap = ShenandoahHeap::heap();
+  heap->recycle_trash();
+  heap->set_early_cleanup_done(true);
+  heap->control_thread()->notify_alloc_failure_waiters();
 }
 
 void ShenandoahConcurrentGC::op_evacuate() {

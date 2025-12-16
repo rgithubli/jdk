@@ -45,7 +45,7 @@ void ShenandoahController::handle_alloc_failure(const ShenandoahAllocRequest& re
   const GCCause::Cause cause = is_humongous ? GCCause::_shenandoah_humongous_allocation_failure : GCCause::_allocation_failure;
 
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
-  // TODO: if we're not yet to final mark
+  // TODO: should we always block here or depending on block?
   if (block) { // TODO: when do we block and when do we not block? Is that block also good for determining whether to block this?
     MonitorLocker ml(&_alloc_failure_waiters_lock);    
     while (!should_terminate() && !heap->is_early_cleanup_done()) {
@@ -55,13 +55,8 @@ void ShenandoahController::handle_alloc_failure(const ShenandoahAllocRequest& re
     // woken up, either because:
     // - early clean up is done, then we can go back to try alloc again
     // - should terminate. return immediately.
-
-    // TODO: what to do when mutator requests space in between early clean up and conc gc is done? we have immediate trash ready for use
-
     return;
   }
-
-  
 
   if (heap->cancel_gc(cause)) {
     log_info(gc)("Failed to allocate %s, " PROPERFMT, req.type_string(), PROPERFMTARGS(req.size() * HeapWordSize));

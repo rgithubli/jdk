@@ -232,7 +232,7 @@ inline bool ShenandoahFreeSet::can_allocate_from(size_t idx) const {
 }
 
 inline size_t ShenandoahFreeSet::alloc_capacity(ShenandoahHeapRegion *r) const {
-  if (r->is_trash()) {
+  if (r->is_trash()) { // TODO: probably we don't need wait for clean up. Recycling will happen later
     // This would be recycled on allocation path
     return ShenandoahHeapRegion::region_size_bytes();
   } else {
@@ -1496,7 +1496,7 @@ HeapWord* ShenandoahFreeSet::try_allocate_in(ShenandoahHeapRegion* r, Shenandoah
     return nullptr;
   }
   HeapWord* result = nullptr;
-  r->try_recycle_under_lock(); // TODO: doesn't it mean that we are already checking immediate trash? - no if before final mark. Final mark gives the knowledge whether
+  r->try_recycle_under_lock();
   in_new_region = r->is_empty();
 
   if (in_new_region) {
