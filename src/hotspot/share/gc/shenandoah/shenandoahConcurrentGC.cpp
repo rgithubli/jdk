@@ -166,7 +166,7 @@ bool ShenandoahConcurrentGC::collect(GCCause::Cause cause) {
 
   // Concurrent stack processing
   if (heap->is_evacuation_in_progress()) {
-    entry_thread_roots();
+    entry_thread_roots(); // TODO: Kelvin put it after cleanup_early. Why? - Could advance cleanup_early
   }
 
   // Process weak roots that might still point to regions that would be broken by cleanup.
@@ -185,6 +185,7 @@ bool ShenandoahConcurrentGC::collect(GCCause::Cause cause) {
   // we will not age young-gen objects in the case that we skip evacuation.
   entry_cleanup_early();
 
+  // TODO: not dump?
   heap->free_set()->log_status_under_lock();
 
   // Processing strong roots
@@ -1083,7 +1084,10 @@ void ShenandoahConcurrentGC::op_cleanup_early() {
   ShenandoahWorkerScope scope(ShenandoahHeap::heap()->workers(),
                               ShenandoahWorkerPolicy::calc_workers_for_conc_cleanup(),
                               "cleanup early.");
-  ShenandoahHeap::heap()->recycle_trash();
+  if (ShenandoahHeap::heap()->recycle_trash()) {
+    heap()->set_early_cleanup_done(true); // TODO: reset it to false
+    heap()->control_thread()->notify_alloc_failure_waiters(); // TODO; need this?
+  }
 }
 
 void ShenandoahConcurrentGC::op_evacuate() {

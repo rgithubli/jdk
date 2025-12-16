@@ -948,7 +948,7 @@ HeapWord* ShenandoahHeap::allocate_memory(ShenandoahAllocRequest& req) {
       //   b) We experienced at least one Full GC (whether or not it had good progress)
 
       const size_t original_count = shenandoah_policy()->full_gc_count();
-      while (result == nullptr && should_retry_allocation(original_count)) {
+      while (result == nullptr && should_retry_allocation(original_count)) { // TODO: may be add limitation here? Otherwise might enter infinite waiting loop
         control_thread()->handle_alloc_failure(req, true);
         result = allocate_memory_under_lock(req, in_new_region);
       }
@@ -2126,6 +2126,14 @@ void ShenandoahHeap::set_concurrent_strong_root_in_progress(bool in_progress) {
     _concurrent_strong_root_in_progress.set();
   } else {
     _concurrent_strong_root_in_progress.unset();
+  }
+}
+
+void ShenandoahHeap::set_early_cleanup_done(bool done) {
+  if (done) {
+    early_cleanup_done.set();
+  } else {
+    early_cleanup_done.unset();
   }
 }
 

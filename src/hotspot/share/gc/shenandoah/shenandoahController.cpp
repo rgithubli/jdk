@@ -46,6 +46,23 @@ void ShenandoahController::handle_alloc_failure(const ShenandoahAllocRequest& re
 
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
   // TODO: if we're not yet to final mark
+  if (block) { // TODO: when do we block and when do we not block? Is that block also good for determining whether to block this?
+    MonitorLocker ml(&_alloc_failure_waiters_lock);    
+    while (!should_terminate() && !heap->is_early_cleanup_done()) {
+      // TODO: what if there are multi mutators waiting for the space? we only wanted wake one of them up, or all?
+      ml.wait();
+    }
+    // woken up, either because:
+    // - early clean up is done, then we can go back to try alloc again
+    // - should terminate. return immediately.
+
+    // TODO: what to do when mutator requests space in between early clean up and conc gc is done? we have immediate trash ready for use
+
+    return;
+  }
+
+  
+
   if (heap->cancel_gc(cause)) {
     log_info(gc)("Failed to allocate %s, " PROPERFMT, req.type_string(), PROPERFMTARGS(req.size() * HeapWordSize));
     request_gc(cause);
@@ -54,6 +71,7 @@ void ShenandoahController::handle_alloc_failure(const ShenandoahAllocRequest& re
   if (block) {
     MonitorLocker ml(&_alloc_failure_waiters_lock);
     while (!should_terminate() && ShenandoahCollectorPolicy::is_allocation_failure(heap->cancelled_cause())) {
+      // how to break: move the allocation code to no_gc, which is the init gc code
       ml.wait();
     }
   }
