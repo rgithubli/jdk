@@ -2129,11 +2129,19 @@ void ShenandoahHeap::set_concurrent_strong_root_in_progress(bool in_progress) {
   }
 }
 
+void ShenandoahHeap::set_concurrent_gc_started(bool started) {
+  if (started) {
+    _concurrent_gc_started.set();
+  } else {
+    _concurrent_gc_started.unset();
+  }
+}
+
 void ShenandoahHeap::set_early_cleanup_done(bool done) {
   if (done) {
-    early_cleanup_done.set();
+    _early_cleanup_done.set();
   } else {
-    early_cleanup_done.unset();
+    _early_cleanup_done.unset();
   }
 }
 

@@ -504,8 +504,12 @@ inline bool ShenandoahHeap::is_concurrent_strong_root_in_progress() const {
   return _concurrent_strong_root_in_progress.is_set();
 }
 
+inline bool ShenandoahHeap::has_concurrent_gc_started() const {
+  return _concurrent_gc_started.is_set();
+}
+
 inline bool ShenandoahHeap::is_early_cleanup_done() const {
-  return early_cleanup_done.is_set();
+  return _early_cleanup_done.is_set();
 }
 
 template<class T>

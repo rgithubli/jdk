@@ -186,5 +186,4 @@ public class TestAllocHumongousFragment {
             System.out.println("Allocated: " + (current / 1024 / 1024) + " Mb");
         }
     }
-
 }

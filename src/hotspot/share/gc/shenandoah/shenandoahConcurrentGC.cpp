@@ -115,6 +115,7 @@ void ShenandoahConcurrentGC::entry_concurrent_update_refs_prepare(ShenandoahHeap
 bool ShenandoahConcurrentGC::collect(GCCause::Cause cause) {
   ShenandoahHeap* const heap = ShenandoahHeap::heap();
   heap->set_early_cleanup_done(false); // TODO: move it to somewhere else...
+  heap->set_concurrent_gc_started(true);
   _generation->ref_processor()->set_soft_reference_policy(
       GCCause::should_clear_all_soft_refs(cause));
 
@@ -251,6 +252,7 @@ bool ShenandoahConcurrentGC::collect(GCCause::Cause cause) {
   // reducing the likelihood that GC will degenerate.
   entry_reset_after_collect();
   heap->set_early_cleanup_done(false); // TODO: move it to somewhere else...
+  heap->set_concurrent_gc_started(false);
 
   return true;
 }

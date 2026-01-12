@@ -339,7 +339,8 @@ private:
   ShenandoahSharedFlag   _full_gc_in_progress;
   ShenandoahSharedFlag   _full_gc_move_in_progress;
   ShenandoahSharedFlag   _concurrent_strong_root_in_progress;
-  ShenandoahSharedFlag   early_cleanup_done;
+  ShenandoahSharedFlag   _concurrent_gc_started;
+  ShenandoahSharedFlag   _early_cleanup_done;
 
   size_t _gc_no_progress_count;
 
@@ -390,6 +391,7 @@ public:
   void set_has_forwarded_objects(bool cond);
   void set_concurrent_strong_root_in_progress(bool cond);
   void set_concurrent_weak_root_in_progress(bool cond);
+  void set_concurrent_gc_started(bool started);
   void set_early_cleanup_done(bool done);
 
   inline bool is_idle() const;
@@ -405,6 +407,7 @@ public:
 
   inline bool is_stw_gc_in_progress() const;
   inline bool is_concurrent_strong_root_in_progress() const;
+  inline bool has_concurrent_gc_started() const;
   inline bool is_early_cleanup_done() const;
 
   inline bool is_concurrent_weak_root_in_progress() const;
