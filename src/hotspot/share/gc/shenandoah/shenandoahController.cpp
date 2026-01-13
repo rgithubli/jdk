@@ -48,14 +48,13 @@ void ShenandoahController::handle_alloc_failure(const ShenandoahAllocRequest& re
   // TODO: should we always block here or depending on block?
   if (block) { // TODO: when do we block and when do we not block? Is that block also good for determining whether to block this?
     MonitorLocker ml(&_alloc_failure_waiters_lock);    
+    bool waited = false;
     while (!should_terminate() && heap->has_concurrent_gc_started() && !heap->is_early_cleanup_done()) {
       // TODO: what if there are multi mutators waiting for the space? we only wanted wake one of them up, or all?
       ml.wait();
+      waited = true;
     }
-    // woken up, either because:
-    // - early clean up is done, then we can go back to try alloc again
-    // - should terminate. return immediately.
-    return;
+    if (waited) return;
   }
 
   if (heap->cancel_gc(cause)) {

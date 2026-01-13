@@ -355,7 +355,7 @@ void HandshakeOperation::do_handshake(JavaThread* thread) {
 
   // It is no longer safe to refer to 'this' as the VMThread/Handshaker may have destroyed this operation
 }
-
+// like safepoint, doesn't stop all the threads
 void Handshake::execute(HandshakeClosure* hs_cl) {
   HandshakeOperation cto(hs_cl, nullptr, Thread::current());
   VM_HandshakeAllThreads handshake(&cto);
