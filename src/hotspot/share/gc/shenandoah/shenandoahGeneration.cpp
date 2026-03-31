@@ -424,9 +424,39 @@ size_t ShenandoahGeneration::available() const {
 }
 
 size_t ShenandoahGeneration::soft_mutator_available() const {
+  typedef LogTarget(Info, gc, ergo) LogGcInfo;
+  const LogGcInfo target;
+  LogStream ls(target);
+
+  // approach 1: softMax - used - soft_max * evacReservePercentage
+  ShenandoahHeap* heap = ShenandoahHeap::heap();
+  size_t soft_max = heap->soft_max_capacity();
+  size_t used = heap->used();
+  size_t soft_evac = soft_max * (ShenandoahEvacReserve / 100.0);
+  size_t avail_1 = (soft_max - used - soft_evac > 0) ? soft_max - used - soft_evac : 0;
+
+  // approach 2: complicated math using available: free_set_available - (Xmx - softmax) * (1 - evacReservePercentage)
   size_t free_set_available = ShenandoahHeap::heap()->free_set()->available();
   size_t soft_tail = (ShenandoahHeap::heap()->max_capacity() - ShenandoahHeap::heap()->soft_max_capacity()) * (1.0 - ShenandoahEvacReserve / 100.0);
+  size_t xmx = heap->max_capacity();
+  size_t xmx_evac = xmx * (ShenandoahEvacReserve / 100.0);
   size_t avail = (free_set_available > soft_tail) ? free_set_available - soft_tail : 0;
+
+  if (avail_1 != avail) {
+    ls.print_cr("ruiamzn - avail not equal!");
+    ls.print_cr("heap soft max heap size: %ld, used: %ld, soft_evac: %ld, avail: %ld",
+      soft_max, used, soft_evac, avail_1);
+    ls.print_cr("Xmx: %ld, evac for whole: %ld, free_set_available: %ld, soft_tail: %ld, avail: %ld", 
+      xmx, xmx_evac, free_set_available, soft_tail, avail);
+  }
+  
+    // soft: 500m, Xmx: 500g
+  // [5.685s][info][gc,ergo     ] free_set_available: 474G, soft_tail: 474G, avail: 125M
+  // [5.686s][info][gc,ergo     ] heap soft max heap size: 512M, used: 334M, avail: 151M
+
+    // soft: 500m, Xmx: 32g
+  // [1.608s][info][gc,ergo     ] heap soft max heap size: 500M, used: 403M, avail: 73454K
+  // [1.608s][info][gc,ergo     ] free_set_available: 30714M, soft_tail: 30654M, avail: 61609K
 
   return avail;
 }
