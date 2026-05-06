@@ -240,7 +240,7 @@ public enum Target {
      * Should we emit a null check against incoming outer this argument by default?
      */
     public boolean nullCheckOuterThisByDefault() {
-        return compareTo(JDK1_25) >= 0;
+        return false;
     }
 
     /** Releases prior to JDK 23 don't allow primitive types as case labels in

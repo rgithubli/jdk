@@ -257,16 +257,11 @@ public enum Source {
         TYPE_ANNOTATIONS_ON_VAR_LAMBDA_PARAMETER(MIN, JDK19),
         UNCONDITIONAL_PATTERN_IN_INSTANCEOF(JDK21, Fragments.FeatureUnconditionalPatternsInInstanceof, DiagKind.PLURAL),
         RECORD_PATTERNS(JDK21, Fragments.FeatureDeconstructionPatterns, DiagKind.PLURAL),
-        IMPLICIT_CLASSES(JDK25, Fragments.FeatureImplicitClasses, DiagKind.PLURAL),
         WARN_ON_ILLEGAL_UTF8(MIN, JDK21),
         UNNAMED_VARIABLES(JDK22, Fragments.FeatureUnnamedVariables, DiagKind.PLURAL),
         PRIMITIVE_PATTERNS(JDK23, Fragments.FeaturePrimitivePatterns, DiagKind.PLURAL),
-        FLEXIBLE_CONSTRUCTORS(JDK25, Fragments.FeatureFlexibleConstructors, DiagKind.NORMAL),
-        MODULE_IMPORTS(JDK25, Fragments.FeatureModuleImports, DiagKind.PLURAL),
-        JAVA_BASE_TRANSITIVE(JDK25, Fragments.FeatureJavaBaseTransitive, DiagKind.PLURAL),
         PRIVATE_MEMBERS_IN_PERMITS_CLAUSE(JDK19),
         ERASE_POLY_SIG_RETURN_TYPE(JDK24),
-        CAPTURE_MREF_RETURN_TYPE(JDK26),
         ;
 
         enum DiagKind {

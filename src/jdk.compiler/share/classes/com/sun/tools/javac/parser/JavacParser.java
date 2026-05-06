@@ -4114,8 +4114,6 @@ public class JavacParser implements Parser {
                 }
 
                 if (isTopLevelMethodOrField) {
-                    checkSourceLevel(token.pos, Feature.IMPLICIT_CLASSES);
-                    defs.appendList(topLevelMethodOrFieldDeclaration(mods, docComment));
                     isImplicitClass = true;
                 } else if (isDefiniteStatementStartToken()) {
                     int startPos = token.pos;
@@ -4297,7 +4295,6 @@ public class JavacParser implements Parser {
             nextToken();
         } else if (token.kind == IDENTIFIER && token.name() == names.module &&
                    peekToken(TokenKind.IDENTIFIER)) {
-            checkSourceLevel(Feature.MODULE_IMPORTS);
             nextToken();
             JCExpression moduleName = qualident(false);
             accept(SEMI);
@@ -5624,9 +5621,7 @@ public class JavacParser implements Parser {
         //TODO: proper tests for this logic (and updates):
         if (parseModuleInfo) {
             unexpectedTopLevelDefinitionStartError = Errors.ExpectedModuleOrOpen;
-        } else if (Feature.IMPLICIT_CLASSES.allowedInSource(source) && !hasPackageDecl) {
-            unexpectedTopLevelDefinitionStartError = Errors.ClassMethodOrFieldExpected;
-        } else if (allowRecords) {
+        }else if (allowRecords) {
             unexpectedTopLevelDefinitionStartError = Errors.Expected4(CLASS, INTERFACE, ENUM, "record");
         } else {
             unexpectedTopLevelDefinitionStartError = Errors.Expected3(CLASS, INTERFACE, ENUM);

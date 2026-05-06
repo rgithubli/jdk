@@ -813,8 +813,6 @@ public class Modules extends JCTree.Visitor {
                     if (msym == syms.java_base &&
                         !preview.participatesInPreview(syms, sym)) {
                         if (source.compareTo(Source.JDK10) >= 0) {
-                            preview.checkSourceLevel(tree.pos(),
-                                                     Feature.JAVA_BASE_TRANSITIVE);
                         }
                     }
                     flags.add(RequiresFlag.TRANSITIVE);
