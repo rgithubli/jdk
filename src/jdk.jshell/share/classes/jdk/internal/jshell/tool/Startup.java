@@ -342,8 +342,7 @@ class Startup {
         DefaultStartupType type;
         if (preview) {
             type = DefaultStartupType.PREVIEW_DEFAULT_STARTUP;
-        } else if (source == null ||
-                   Feature.MODULE_IMPORTS.allowedInSource(source)) {
+        } else if (source == null) {
             type = DefaultStartupType.DEFAULT_STARTUP;
         } else {
             type = DefaultStartupType.DEFAULT_STARTUP_NO_MODULE_IMPORTS;

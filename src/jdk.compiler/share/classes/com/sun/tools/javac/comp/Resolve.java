@@ -3993,9 +3993,6 @@ public class Resolve {
         if (isEarlyReference(env, base, v) && v.owner != env.enclClass.sym)
             return false;
 
-        // The flexible constructors feature must be enabled
-        preview.checkSourceLevel(pos, Feature.FLEXIBLE_CONSTRUCTORS);
-
         // OK
         return true;
     }
