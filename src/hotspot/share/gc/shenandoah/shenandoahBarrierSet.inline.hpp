@@ -100,19 +100,32 @@ inline oop ShenandoahBarrierSet::load_reference_barrier_mutator(oop obj, T* load
   return fwd;
 }
 
+// TODO: probably needs an LRB_humongous?
+// - forwarding table resides outside of heap, rather than be in mark words
+inline oop ShenandoahBarrierSet::load_reference_barrier_humongous(oop obj) {
+  // forwarding table look up
+  return obj;
+}
+
 inline oop ShenandoahBarrierSet::load_reference_barrier(oop obj) {
-  if (!ShenandoahLoadRefBarrier) {
+  if (!ShenandoahLoadRefBarrier) { // TODO: if LRB is not enabled, we can't have humongous sliding
     return obj;
   }
-  if (_heap->has_forwarded_objects() && _heap->in_collection_set(obj)) {
-    // Subsumes null-check
-    assert(obj != nullptr, "cset check must have subsumed null-check");
-    oop fwd = ShenandoahForwarding::get_forwardee(obj);
-    if (obj == fwd && _heap->is_evacuation_in_progress()) {
-      Thread* t = Thread::current();
-      return _heap->evacuate_object(obj, t);
+  if (_heap->has_forwarded_objects()) {
+    shenandoah_assert_in_heap_bounds_or_null(nullptr, obj);
+    HeapWord* forwardee = _heap->humongous_forwardee(_heap->heap_region_index_containing(obj));
+    if (forwardee != nullptr) {
+      return cast_to_oop(forwardee);
     }
-    return fwd;
+
+    if ( && _heap->in_collection_set(obj)) {
+      // Subsumes null-check
+      assert(obj != nullptr, "cset check must have subsumed null-check");
+      oop fwd = ShenandoahForwarding::get_forwardee(obj);
+      if (obj == fwd && _heap->is_evacuation_in_progress()) {
+        Thread* t = Thread::current();
+        return _heap->evacuate_object(obj, t);
+    }
   }
   return obj;
 }

@@ -80,6 +80,7 @@
 #include "gc/shenandoah/shenandoahVMOperations.hpp"
 #include "gc/shenandoah/shenandoahWorkerPolicy.hpp"
 #include "gc/shenandoah/shenandoahWorkGroup.hpp"
+#include "gc/shenandoah/shenandoahPhysicalMemoryManager.hpp"
 #include "gc/shenandoah/shenandoahYoungGeneration.hpp"
 #include "memory/allocation.hpp"
 #include "memory/classLoaderMetaspace.hpp"
@@ -406,6 +407,8 @@ jint ShenandoahHeap::initialize() {
                                             cset_size, cset_page_size,
                                             cset_rs.base(),
                                             cset_rs.size(), cset_rs.page_size());
+    _humongous_forwarding_table = NEW_C_HEAP_ARRAY(HeapWord*, _num_regions, mtGC);
+    clear_humongous_forwarding_table();
   }
 
   _regions = NEW_C_HEAP_ARRAY(ShenandoahHeapRegion*, _num_regions, mtGC);
@@ -2525,6 +2528,40 @@ void ShenandoahHeap::prepare_concurrent_roots() {
   set_concurrent_weak_root_in_progress(true);
   if (unload_classes()) {
     _unloader.prepare();
+  }
+}
+
+void ShenandoahHeap::sliding_humongous() {
+  size_t origin_index = 0;
+  size_t dest_index = 0;
+  HeapWord* origin_start_addr = nullptr;
+  HeapWord* dest_start_addr = nullptr;
+  for (size_t i = 0; i < _num_regions; i++) {
+    ShenandoahHeapRegion* r = get_region(i);
+    if (r->is_humongous_start() && r->has_live()) {
+      // TODO: put the address to a table
+      origin_index = i;
+      oop obj = cast_to_oop(r->bottom());
+      const size_t region_span = ShenandoahHeapRegion::required_regions(obj->size() * HeapWordSize);
+      // Change metadata in ShenandoahHeapRegion
+      if (origin_index != dest_index) {
+        origin_start_addr = r->bottom();
+        dest_start_addr = get_region(dest_index)->bottom();
+        set_humongous_forwardee(origin_index, dest_start_addr); // <------------ setting at here
+        for (size_t j = 0; j < region_span; j++) {
+          ShenandoahHeapRegion* dest_region = get_region(dest_index);
+          ShenandoahHeapRegion* origin_region = get_region(origin_index);
+          origin_region->copy_region_to(dest_region); // TODO: 1. implement copy_region_to 2. also need to update the table here, add forwarding
+          origin_region->clear_live_data();
+          // region size is always aligned with page size
+          dest_index++;
+          origin_index++;
+        }
+        ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_start_addr, (char *)dest_start_addr, region_span * ShenandoahHeapRegion::region_size_bytes());
+      } else {
+        dest_index += region_span;
+      }
+    }
   }
 }
 

@@ -427,6 +427,11 @@ inline bool ShenandoahHeap::requires_marking(const void* entry) const {
   return !_marking_context->is_marked_strong(obj);
 }
 
+inline bool ShenandoahHeap::is_slided_humongous(oop obj) {
+  // can only use obj as pure address and have to assume that it might not be mapped to any physical address (slided)
+
+}
+
 inline bool ShenandoahHeap::in_collection_set(oop p) const {
   assert(collection_set() != nullptr, "Sanity");
   return collection_set()->is_in(p);

@@ -287,6 +287,7 @@ private:
   size_t    _num_regions;
   ShenandoahHeapRegion** _regions;
   uint8_t* _affiliations;       // Holds array of enum ShenandoahAffiliation, including FREE status in non-generational mode
+  HeapWord** _humongous_forwarding_table;
 
 public:
 
@@ -306,6 +307,16 @@ public:
   void heap_region_iterator(ShenandoahHeapRegionClosure* blk) const;
 
   inline ShenandoahMmuTracker* mmu_tracker() { return &_mmu_tracker; };
+
+  inline HeapWord* humongous_forwardee(size_t region_idx) const {
+      return _humongous_forwarding_table[region_idx];
+  }
+  inline void set_humongous_forwardee(size_t region_idx, HeapWord* forwardee) {
+      _humongous_forwarding_table[region_idx] = forwardee;
+  }
+  inline void clear_humongous_forwarding_table() {
+    Copy::zero_to_bytes(_humongous_forwarding_table, sizeof(HeapWord*) * _num_regions);
+  }
 
 // ---------- GC state machinery
 //
@@ -484,6 +495,8 @@ private:
   virtual void evacuate_collection_set(ShenandoahGeneration* generation, bool concurrent);
   // Concurrent root processing
   void prepare_concurrent_roots();
+
+  void sliding_humongous();
   void finish_concurrent_roots();
   // Concurrent class unloading support
   void do_class_unloading();
