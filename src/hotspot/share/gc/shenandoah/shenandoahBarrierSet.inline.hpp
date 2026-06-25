@@ -100,13 +100,6 @@ inline oop ShenandoahBarrierSet::load_reference_barrier_mutator(oop obj, T* load
   return fwd;
 }
 
-// TODO: probably needs an LRB_humongous?
-// - forwarding table resides outside of heap, rather than be in mark words
-inline oop ShenandoahBarrierSet::load_reference_barrier_humongous(oop obj) {
-  // forwarding table look up
-  return obj;
-}
-
 inline oop ShenandoahBarrierSet::load_reference_barrier(oop obj) {
   if (!ShenandoahLoadRefBarrier) { // TODO: if LRB is not enabled, we can't have humongous sliding
     return obj;

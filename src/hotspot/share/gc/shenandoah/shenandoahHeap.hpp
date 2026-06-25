@@ -314,7 +314,7 @@ public:
   inline void set_humongous_forwardee(size_t region_idx, HeapWord* forwardee) {
       _humongous_forwarding_table[region_idx] = forwardee;
   }
-  inline void clear_humongous_forwarding_table() {
+  inline void reset_humongous_forwarding_table() {
     Copy::zero_to_bytes(_humongous_forwarding_table, sizeof(HeapWord*) * _num_regions);
   }
 

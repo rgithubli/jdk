@@ -408,7 +408,7 @@ jint ShenandoahHeap::initialize() {
                                             cset_rs.base(),
                                             cset_rs.size(), cset_rs.page_size());
     _humongous_forwarding_table = NEW_C_HEAP_ARRAY(HeapWord*, _num_regions, mtGC);
-    clear_humongous_forwarding_table();
+    reset_humongous_forwarding_table();
   }
 
   _regions = NEW_C_HEAP_ARRAY(ShenandoahHeapRegion*, _num_regions, mtGC);
@@ -2539,7 +2539,6 @@ void ShenandoahHeap::sliding_humongous() {
   for (size_t i = 0; i < _num_regions; i++) {
     ShenandoahHeapRegion* r = get_region(i);
     if (r->is_humongous_start() && r->has_live()) {
-      // TODO: put the address to a table
       origin_index = i;
       oop obj = cast_to_oop(r->bottom());
       const size_t region_span = ShenandoahHeapRegion::required_regions(obj->size() * HeapWordSize);
@@ -2547,11 +2546,11 @@ void ShenandoahHeap::sliding_humongous() {
       if (origin_index != dest_index) {
         origin_start_addr = r->bottom();
         dest_start_addr = get_region(dest_index)->bottom();
-        set_humongous_forwardee(origin_index, dest_start_addr); // <------------ setting at here
+        set_humongous_forwardee(origin_index, dest_start_addr);
         for (size_t j = 0; j < region_span; j++) {
           ShenandoahHeapRegion* dest_region = get_region(dest_index);
           ShenandoahHeapRegion* origin_region = get_region(origin_index);
-          origin_region->copy_region_to(dest_region); // TODO: 1. implement copy_region_to 2. also need to update the table here, add forwarding
+          origin_region->copy_region_to(dest_region); // TODO: 1. implement copy_region_to
           origin_region->clear_live_data();
           // region size is always aligned with page size
           dest_index++;
