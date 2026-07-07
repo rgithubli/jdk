@@ -807,7 +807,7 @@ void ShenandoahConcurrentGC::op_final_mark() {
     // Notify JVMTI that the tagmap table will need cleaning.
     JvmtiTagMap::set_needs_cleaning();
 
-    // TODO: slide humongous, assume, that regular and humongous never met
+    // TODO: assume, that regular and humongous never met
     heap->sliding_humongous();
 
     // The collection set is chosen by prepare_regions_and_collection_set(). Additionally, certain parameters have been

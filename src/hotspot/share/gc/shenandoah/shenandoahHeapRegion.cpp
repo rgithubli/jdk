@@ -555,7 +555,7 @@ void ShenandoahHeapRegion::oop_iterate_humongous_slice_all(OopIterateClosure* cl
 
 void ShenandoahHeapRegion::copy_region_to_at_safepoint(ShenandoahHeapRegion* dest) {
   // Seldom updated fields
-  dest->_state.store(state()); // TODO: load_acquire vs .load()?
+  dest->_state.store_relaxed(state()); // TODO: load_acquire vs .load()?
 
   dest->set_top(dest->bottom() + (top() - bottom()));
 
@@ -563,12 +563,12 @@ void ShenandoahHeapRegion::copy_region_to_at_safepoint(ShenandoahHeapRegion* des
   dest->_gclab_allocs = get_gclab_allocs();
   dest->_plab_allocs = get_plab_allocs();
 
-  dest->_live_data.store(get_live_data_words());
+  dest->_live_data.store_relaxed(get_live_data_words());
   // dest->_critical_pins.store(..); // TODO: how to deal with pinned regions?
 
   dest->_mixed_candidate_garbage_words = this->_mixed_candidate_garbage_words;
 
-  dest->_update_watermark.store(dest->bottom() + (get_update_watermark() - bottom()));
+  dest->_update_watermark.store_relaxed(dest->bottom() + (get_update_watermark() - bottom()));
 
   dest->_age = this->age();
   dest->_promoted_in_place = this->was_promoted_in_place();
@@ -577,7 +577,7 @@ void ShenandoahHeapRegion::copy_region_to_at_safepoint(ShenandoahHeapRegion* des
   // TODO: should this be unset or just leave it as it is?
   dest->_recycling.unset();
 
-  dest->_has_self_forwards.set_cond(this->_has_self_forwards);
+  dest->_has_self_forwards.set_cond(this->_has_self_forwards.is_set());
 
   // This is only read/written by a gc worker to avoid unnecessary bitmap resets
   dest->_needs_bitmap_reset = this->_needs_bitmap_reset;

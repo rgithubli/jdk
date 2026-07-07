@@ -459,7 +459,7 @@ public:
   // ending at start + words.
   void oop_iterate_humongous_slice_all(OopIterateClosure* cl, HeapWord* start, size_t words) const;
 
-  void copy_region_to(ShenandoahHeapRegion* coptyTo);
+  void copy_region_to_at_safepoint(ShenandoahHeapRegion* coptyTo);
 
   HeapWord* block_start(const void* p) const;
   size_t block_size(const HeapWord* p) const;

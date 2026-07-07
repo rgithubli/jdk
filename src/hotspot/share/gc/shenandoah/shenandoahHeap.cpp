@@ -2532,36 +2532,87 @@ void ShenandoahHeap::prepare_concurrent_roots() {
 }
 
 void ShenandoahHeap::sliding_humongous() {
-  size_t origin_index = 0;
-  size_t dest_index = 0;
-  HeapWord* origin_start_addr = nullptr;
+  struct Gap {
+    size_t start;
+    size_t region_count;
+  };
+
+  Gap* gaps = NEW_C_HEAP_ARRAY(Gap, _num_regions, mtGC);
+  size_t gap_count = 1; // Assume the whole heap is a big gap
+  gaps[0].start = 0;
+  gaps[0].region_count = _num_regions;
+
+  // size_t origin_index = 0;
+  // size_t dest_index = 0;
+  HeapWord* origin_start_addr = nullptr; // Should these two be down below?
   HeapWord* dest_start_addr = nullptr;
+
   for (size_t i = 0; i < _num_regions; i++) {
     ShenandoahHeapRegion* r = get_region(i);
+
     if (r->is_humongous_start() && r->has_live()) {
-      origin_index = i;
+      size_t origin_index = i;
       oop obj = cast_to_oop(r->bottom());
       const size_t region_span = ShenandoahHeapRegion::required_regions(obj->size() * HeapWordSize);
-      // Change metadata in ShenandoahHeapRegion
-      if (origin_index != dest_index) {
-        origin_start_addr = r->bottom();
-        dest_start_addr = get_region(dest_index)->bottom();
-        set_humongous_forwardee(origin_index, dest_start_addr);
-        for (size_t j = 0; j < region_span; j++) {
-          ShenandoahHeapRegion* dest_region = get_region(dest_index);
-          ShenandoahHeapRegion* origin_region = get_region(origin_index);
-          origin_region->copy_region_to(dest_region); // TODO: 1. implement copy_region_to
-          origin_region->clear_live_data();
-          // region size is always aligned with page size
-          dest_index++;
-          origin_index++;
+
+      if (!r->is_pinned()) {
+        // sliding should consider previous empty left over
+        // Change metadata in ShenandoahHeapRegion
+        size_t dest_index = i; // worst case: not move
+        size_t dest_gap_index = _num_regions;
+        for (size_t j = 0; j < gap_count; j++) {
+          // assert(gaps[j].start < origin_index)
+          if (gaps[j].region_count >= region_span) {
+            // the gap is large enough to move
+            dest_index = gaps[j].start;
+            dest_gap_index = j;
+            break;
+          }
         }
-        ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_start_addr, (char *)dest_start_addr, region_span * ShenandoahHeapRegion::region_size_bytes());
+
+        if (origin_index != dest_index) {
+          origin_start_addr = r->bottom();
+          dest_start_addr = get_region(dest_index)->bottom();
+          set_humongous_forwardee(origin_index, dest_start_addr);
+
+          for (size_t j = 0; j < region_span; j++) {
+            ShenandoahHeapRegion* dest_region = get_region(dest_index);
+            ShenandoahHeapRegion* origin_region = get_region(origin_index);
+            origin_region->copy_region_to_at_safepoint(dest_region);
+            origin_region->clear_live_data();
+            // region size is always aligned with page size
+            dest_index++;
+            origin_index++;
+          }
+          ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_start_addr, (char *)dest_start_addr, region_span * ShenandoahHeapRegion::region_size_bytes());
+          // TODO: Trash the rest of regions if it comes to the end () - do it now or just rely on the exiting flow?
+
+          // Adjust the gap
+          gaps[dest_gap_index].start += region_span;
+          gaps[dest_gap_index].region_count -= region_span;
+        } else {
+          // origin_index == dest_index. Essentially not move. Just simply increase dest_index. i will increase in the for loop.
+          gaps[gap_count - 1].start = dest_index + region_span;
+          gaps[gap_count - 1].region_count = _num_regions - gaps[gap_count - 1].start;
+        }
       } else {
-        dest_index += region_span;
+        // if it's pinned, don't move pinned regions. Record the pinned region by adding the end of pinned regions
+        // to gaps
+
+        // Update dest_indices. Add a new one that starts from the pinned region end
+        gaps[gap_count - 1].region_count = i - gaps[gap_count - 1].start;
+
+        // new gap starts from the end of the pinned region
+        gaps[gap_count].start = i + region_span;
+        gaps[gap_count].region_count = _num_regions - gaps[gap_count].start;
+        gap_count++;
       }
+    } else if (!r->is_humongous()) {
+      // coming to non humongous area. Should stop here, or just treat regular regions as pinned regions
     }
   }
+
+  FREE_C_HEAP_ARRAY(gaps);
 }
 
 void ShenandoahHeap::finish_concurrent_roots() {
