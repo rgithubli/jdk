@@ -553,18 +553,23 @@ void ShenandoahHeapRegion::oop_iterate_humongous_slice_all(OopIterateClosure* cl
   obj->oop_iterate(cl, MemRegion(start, start + words));
 }
 
+// TODO: currently this only works for h regions due to bit map copy
 void ShenandoahHeapRegion::copy_region_to_at_safepoint(ShenandoahHeapRegion* dest) {
+  assert(pin_count() == 0, "Cannot copy from a pinned region");
   // Seldom updated fields
   dest->_state.store_relaxed(state()); // TODO: load_acquire vs .load()?
 
-  dest->set_top(dest->bottom() + (top() - bottom()));
+  HeapWord* src_bottom = bottom();
+  HeapWord* dest_bottom = dest->bottom();
+
+  dest->set_top(dest_bottom + (top() - src_bottom));
 
   dest->_tlab_allocs = get_tlab_allocs();
   dest->_gclab_allocs = get_gclab_allocs();
   dest->_plab_allocs = get_plab_allocs();
 
   dest->_live_data.store_relaxed(get_live_data_words());
-  // dest->_critical_pins.store(..); // TODO: how to deal with pinned regions?
+  dest->_critical_pins.store_relaxed(this->_critical_pins.load_relaxed()); // TODO: say we asssume this is an unpinned region
 
   dest->_mixed_candidate_garbage_words = this->_mixed_candidate_garbage_words;
 
@@ -581,6 +586,23 @@ void ShenandoahHeapRegion::copy_region_to_at_safepoint(ShenandoahHeapRegion* des
 
   // This is only read/written by a gc worker to avoid unnecessary bitmap resets
   dest->_needs_bitmap_reset = this->_needs_bitmap_reset;
+
+  // also adjust TAMS
+  ShenandoahMarkingContext* ctx = ShenandoahHeap::heap()->marking_context();  
+  HeapWord* src_tams = ctx->top_at_mark_start(this);
+  size_t tams_offset = src_tams - this->bottom();
+  ctx->_top_at_mark_starts_base[dest->index()] = dest->bottom() + tams_offset;
+
+  // ..and bitmap. TODO: Currently this only works for h regions
+  if (is_humongous_start()) {
+    if (ctx->is_marked_strong(src_bottom)) {
+      bool was_upgraded;
+      ctx->mark_strong(cast_to_oop(dest_bottom), was_upgraded); // TODO: is it always false?
+    } else if (ctx->is_marked_weak(cast_to_oop(src_bottom))) { // TODO: may be add an overload like strong does
+      ctx->mark_weak(cast_to_oop(dest_bottom));
+    }
+    ctx->clear_bitmap(this); // should we clear this? or clear when we trash
+  }
 }
 
 

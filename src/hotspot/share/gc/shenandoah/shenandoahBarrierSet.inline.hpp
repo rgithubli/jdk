@@ -111,13 +111,15 @@ inline oop ShenandoahBarrierSet::load_reference_barrier(oop obj) {
       return cast_to_oop(forwardee);
     }
 
-    if ( && _heap->in_collection_set(obj)) {
+    if (_heap->in_collection_set(obj)) {
       // Subsumes null-check
       assert(obj != nullptr, "cset check must have subsumed null-check");
       oop fwd = ShenandoahForwarding::get_forwardee(obj);
       if (obj == fwd && _heap->is_evacuation_in_progress()) {
         Thread* t = Thread::current();
         return _heap->evacuate_object(obj, t);
+      }
+      return fwd;
     }
   }
   return obj;

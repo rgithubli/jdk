@@ -2608,7 +2608,21 @@ void ShenandoahHeap::sliding_humongous() {
         gap_count++;
       }
     } else if (!r->is_humongous()) {
-      // coming to non humongous area. Should stop here, or just treat regular regions as pinned regions
+      // coming to non humongous area. Trash all the remaining gaps
+      ShenandoahHeapLocker locker(lock());
+      for (size_t j = 0; j < gap_count; j++) {
+        // can't just trash the gap span - the last one has gap span to the end of heap. trash to current index i
+        size_t start = gaps[j].start;
+        size_t span = gaps[j].region_count;
+        for (size_t k = 0; k < span && (start + k < i); k++) {
+          // mark it as non active
+          ShenandoahHeapRegion* gap_region = get_region(gaps[j].start + k);
+          if (gap_region->is_humongous()) { 
+            gap_region->make_trash();
+          }
+        }
+      }
+      break;
     }
   }
 

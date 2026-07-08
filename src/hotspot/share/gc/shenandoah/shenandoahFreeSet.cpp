@@ -1352,7 +1352,10 @@ void ShenandoahRegionPartitions::assert_bounds() {
          (_capacity[int(ShenandoahFreeSetPartitionId::Mutator)] - _used[int(ShenandoahFreeSetPartitionId::Mutator)]),
          "Mutator available must equal capacity minus used");
   assert(_humongous_waste[int(ShenandoahFreeSetPartitionId::Mutator)] == young_humongous_waste,
-         "Mutator humongous waste must match");
+        "Mutator humongous waste must match. "
+        "ShenandoahFreeSetPartitionId::Mutator: %zu young_humongous_waste: %zu",
+        _humongous_waste[int(ShenandoahFreeSetPartitionId::Mutator)],
+        young_humongous_waste);
 }
 
 void ShenandoahRegionPartitions::assert_bounds_sanity() {
@@ -1496,7 +1499,7 @@ void ShenandoahFreeSet::update_allocation_bias() {
                                - _partitions.leftmost(ShenandoahFreeSetPartitionId::Mutator));
     idx_t non_empty_on_right = (_partitions.rightmost(ShenandoahFreeSetPartitionId::Mutator)
                                 - _partitions.rightmost_empty(ShenandoahFreeSetPartitionId::Mutator));
-    _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::Mutator, (non_empty_on_right < non_empty_on_left));
+    _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::Mutator, (non_empty_on_right < non_empty_on_left)); // TODO: should be always right to left
     _alloc_bias_weight = INITIAL_ALLOC_BIAS_WEIGHT;
   }
 }
@@ -1790,7 +1793,7 @@ void ShenandoahFreeSet::clear_internal() {
                              /* AffiliatedChangesAreYoungNeutral */ true, /* AffiliatedChangesAreGlobalNeutral */ true,
                              /* UnaffiliatedChangesAreYoungNeutral */ true>();
   _alloc_bias_weight = 0;
-  _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::Mutator, true);
+  _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::Mutator, true); // TODO: should be always right to left
   _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::Collector, false);
   _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::OldCollector, false);
 }
