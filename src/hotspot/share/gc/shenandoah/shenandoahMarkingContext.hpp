@@ -39,7 +39,9 @@ class ShenandoahHeapRegion;
  * Encapsulate a marking bitmap with the top-at-mark-start and top-bitmaps array.
  */
 class ShenandoahMarkingContext : public CHeapObj<mtGC> {
+  // TODO: maybe shouldn't be this lenient?
   friend class ShenandoahHeapRegion;
+  friend class ShenandoahHeap;
 
 private:
   // Marking bitmap

@@ -2546,8 +2546,19 @@ void ShenandoahHeap::sliding_humongous() {
   // size_t dest_index = 0;
   HeapWord* origin_start_addr = nullptr; // Should these two be down below?
   HeapWord* dest_start_addr = nullptr;
+  ResourceMark rm;
+  stringStream ss;
 
-  for (size_t i = 0; i < _num_regions; i++) {
+  // Skip CDS. TODO: there are other states as well. as well as empty uncommitted etc. How do we deal with those regions?
+  size_t i = 0;
+  while (i < _num_regions && !get_region(i)->is_humongous()) {
+    i++;
+  }
+
+  gaps[0].start = i;
+  gaps[0].region_count = _num_regions - i;
+
+  for (;i < _num_regions; i++) {
     ShenandoahHeapRegion* r = get_region(i);
 
     if (r->is_humongous_start() && r->has_live()) {
@@ -2555,7 +2566,7 @@ void ShenandoahHeap::sliding_humongous() {
       oop obj = cast_to_oop(r->bottom());
       const size_t region_span = ShenandoahHeapRegion::required_regions(obj->size() * HeapWordSize);
 
-      if (!r->is_pinned()) {
+      if (r->pin_count() == 0) {
         // sliding should consider previous empty left over
         // Change metadata in ShenandoahHeapRegion
         size_t dest_index = i; // worst case: not move
@@ -2574,12 +2585,28 @@ void ShenandoahHeap::sliding_humongous() {
           origin_start_addr = r->bottom();
           dest_start_addr = get_region(dest_index)->bottom();
           set_humongous_forwardee(origin_index, dest_start_addr);
-
           for (size_t j = 0; j < region_span; j++) {
             ShenandoahHeapRegion* dest_region = get_region(dest_index);
             ShenandoahHeapRegion* origin_region = get_region(origin_index);
+
+            log_info(gc)("ruiamzn - before sliding");
+            origin_region->print_on(&ss);
+            log_info(gc)("Slide src: %s", ss.as_string());
+            ss.reset();
+            dest_region->print_on(&ss);
+            log_info(gc)("Slide dst: %s", ss.as_string());
+
+
             origin_region->copy_region_to_at_safepoint(dest_region);
             origin_region->clear_live_data();
+
+            origin_region->print_on(&ss);
+            log_info(gc)("Slide src: %s", ss.as_string());
+            ss.reset();
+            dest_region->print_on(&ss);
+            log_info(gc)("Slide dst: %s", ss.as_string());
+
+          
             // region size is always aligned with page size
             dest_index++;
             origin_index++;
@@ -2619,6 +2646,7 @@ void ShenandoahHeap::sliding_humongous() {
           ShenandoahHeapRegion* gap_region = get_region(gaps[j].start + k);
           if (gap_region->is_humongous()) { 
             gap_region->make_trash();
+            marking_context()->_top_at_mark_starts_base[gap_region->index()] = gap_region->top();
           }
         }
       }

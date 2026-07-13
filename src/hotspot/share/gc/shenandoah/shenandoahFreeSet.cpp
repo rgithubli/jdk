@@ -1479,29 +1479,30 @@ void ShenandoahFreeSet::add_promoted_in_place_region_to_old_collector(Shenandoah
 }
 
 void ShenandoahFreeSet::update_allocation_bias() {
-  if (_alloc_bias_weight-- <= 0) {
-    // We have observed that regions not collected in previous GC cycle tend to congregate at one end or the other
-    // of the heap.  Typically, these are the more recently engaged regions and the objects in these regions have not
-    // yet had a chance to die (and/or are treated as floating garbage).  If we use the same allocation bias on each
-    // GC pass, these "most recently" engaged regions for GC pass N will also be the "most recently" engaged regions
-    // for GC pass N+1, and the relatively large amount of live data and/or floating garbage introduced
-    // during the most recent GC pass may once again prevent the region from being collected.  We have found that
-    // alternating the allocation behavior between GC passes improves evacuation performance by 3-7% on certain
-    // benchmarks.  In the best case, this has the effect of consuming these partially consumed regions before
-    // the start of the next mark cycle so all of their garbage can be efficiently reclaimed.
-    //
-    // First, finish consuming regions that are already partially consumed so as to more tightly limit ranges of
-    // available regions.  Other potential benefits:
-    //  1. Eventual collection set has fewer regions because we have packed newly allocated objects into fewer regions
-    //  2. We preserve the "empty" regions longer into the GC cycle, reducing likelihood of allocation failures
-    //     late in the GC cycle.
-    idx_t non_empty_on_left = (_partitions.leftmost_empty(ShenandoahFreeSetPartitionId::Mutator)
-                               - _partitions.leftmost(ShenandoahFreeSetPartitionId::Mutator));
-    idx_t non_empty_on_right = (_partitions.rightmost(ShenandoahFreeSetPartitionId::Mutator)
-                                - _partitions.rightmost_empty(ShenandoahFreeSetPartitionId::Mutator));
-    _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::Mutator, (non_empty_on_right < non_empty_on_left)); // TODO: should be always right to left
-    _alloc_bias_weight = INITIAL_ALLOC_BIAS_WEIGHT;
-  }
+  // if (_alloc_bias_weight-- <= 0) {
+  //   // We have observed that regions not collected in previous GC cycle tend to congregate at one end or the other
+  //   // of the heap.  Typically, these are the more recently engaged regions and the objects in these regions have not
+  //   // yet had a chance to die (and/or are treated as floating garbage).  If we use the same allocation bias on each
+  //   // GC pass, these "most recently" engaged regions for GC pass N will also be the "most recently" engaged regions
+  //   // for GC pass N+1, and the relatively large amount of live data and/or floating garbage introduced
+  //   // during the most recent GC pass may once again prevent the region from being collected.  We have found that
+  //   // alternating the allocation behavior between GC passes improves evacuation performance by 3-7% on certain
+  //   // benchmarks.  In the best case, this has the effect of consuming these partially consumed regions before
+  //   // the start of the next mark cycle so all of their garbage can be efficiently reclaimed.
+  //   //
+  //   // First, finish consuming regions that are already partially consumed so as to more tightly limit ranges of
+  //   // available regions.  Other potential benefits:
+  //   //  1. Eventual collection set has fewer regions because we have packed newly allocated objects into fewer regions
+  //   //  2. We preserve the "empty" regions longer into the GC cycle, reducing likelihood of allocation failures
+  //   //     late in the GC cycle.
+  //   idx_t non_empty_on_left = (_partitions.leftmost_empty(ShenandoahFreeSetPartitionId::Mutator)
+  //                              - _partitions.leftmost(ShenandoahFreeSetPartitionId::Mutator));
+  //   idx_t non_empty_on_right = (_partitions.rightmost(ShenandoahFreeSetPartitionId::Mutator)
+  //                               - _partitions.rightmost_empty(ShenandoahFreeSetPartitionId::Mutator));
+  //   _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::Mutator, (non_empty_on_right < non_empty_on_left)); // TODO: should be always right to left
+  //   _alloc_bias_weight = INITIAL_ALLOC_BIAS_WEIGHT;
+  // }
+  // do nothing
 }
 
 HeapWord* ShenandoahFreeSet::allocate_contiguous(ShenandoahAllocRequest& req, bool is_humongous) {
@@ -1793,7 +1794,7 @@ void ShenandoahFreeSet::clear_internal() {
                              /* AffiliatedChangesAreYoungNeutral */ true, /* AffiliatedChangesAreGlobalNeutral */ true,
                              /* UnaffiliatedChangesAreYoungNeutral */ true>();
   _alloc_bias_weight = 0;
-  _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::Mutator, true); // TODO: should be always right to left
+  _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::Mutator, false); // TODO: should be always right to left
   _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::Collector, false);
   _partitions.set_bias_from_left_to_right(ShenandoahFreeSetPartitionId::OldCollector, false);
 }
