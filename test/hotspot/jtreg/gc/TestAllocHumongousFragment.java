@@ -31,12 +31,12 @@
  * @requires vm.gc.Shenandoah
  * @library /test/lib
  *
- * @run main/othervm -Xmx1g -Xms1g -Xlog:gc* -XX:+UnlockDiagnosticVMOptions -XX:+UnlockExperimentalVMOptions -XX:ShenandoahTargetNumRegions=2048
+ * @run main/othervm -Xmx1g -Xms1g -Xlog:gc*=debug:file=/tmp/gc.log -XX:+UnlockDiagnosticVMOptions -XX:+UnlockExperimentalVMOptions -XX:ShenandoahTargetNumRegions=2048
  *      -XX:+UseShenandoahGC -XX:ShenandoahGCHeuristics=adaptive
  *      -XX:+ShenandoahVerify
  *      TestAllocHumongousFragment
  *
- * @run main/othervm -Xmx1g -Xms1g -Xlog:gc* -XX:+UnlockDiagnosticVMOptions -XX:+UnlockExperimentalVMOptions -XX:ShenandoahTargetNumRegions=2048
+ * @run main/othervm -Xmx1g -Xms1g -Xlog:gc*=debug:file=/tmp/gc.log -XX:+UnlockDiagnosticVMOptions -XX:+UnlockExperimentalVMOptions -XX:ShenandoahTargetNumRegions=2048
  *      -XX:+UseShenandoahGC -XX:ShenandoahGCHeuristics=adaptive
  *      TestAllocHumongousFragment
 */
