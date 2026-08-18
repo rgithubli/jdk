@@ -2532,154 +2532,220 @@ void ShenandoahHeap::prepare_concurrent_roots() {
 }
 
 void ShenandoahHeap::sliding_humongous() {
+  // TODO: two runs for now. can do it in one run
+  // TODO: needs to be 
+  // First run: find all the gaps
   struct Gap {
     size_t start;
     size_t region_count;
   };
 
   Gap* gaps = NEW_C_HEAP_ARRAY(Gap, _num_regions, mtGC);
-  size_t gap_count = 1; // Assume the whole heap is a big gap
-  gaps[0].start = 0;
-  gaps[0].region_count = _num_regions;
+  size_t gap_count = 0; // Assume the whole heap is a big gap
 
-  // size_t origin_index = 0;
-  // size_t dest_index = 0;
-  HeapWord* origin_start_addr = nullptr; // Should these two be down below?
-  HeapWord* dest_start_addr = nullptr;
-  ResourceMark rm;
-  stringStream ss;
-
-  // Skip CDS. TODO: there are other states as well. as well as empty uncommitted etc. How do we deal with those regions?
-  size_t i = 0;
-  while (i < _num_regions && !get_region(i)->is_humongous()) {
-    i++;
-  }
-
-  gaps[0].start = i;
-  gaps[0].region_count = _num_regions - i;
-
-  for (;i < _num_regions; i++) {
-    ShenandoahHeapRegion* r = get_region(i);
-
-    if (r->is_humongous_start() && r->has_live()) {
-      log_info(gc)("ruiamzn - in r->is_humongous_start() && r->has_live(). region: %zu", i);
-
-      size_t origin_index = i;
-      oop obj = cast_to_oop(r->bottom());
-      const size_t region_span = ShenandoahHeapRegion::required_regions(obj->size() * HeapWordSize);
-
-      if (r->pin_count() == 0) {
-        log_info(gc)("ruiamzn - region %zu: r->pin_count == 0", i);
-        // sliding should consider previous empty left over
-        // Change metadata in ShenandoahHeapRegion
-        size_t dest_index = i; // worst case: not move
-        size_t dest_gap_index = _num_regions;
-        for (size_t j = 0; j < gap_count; j++) {
-          // assert(gaps[j].start < origin_index)
-          if (gaps[j].region_count >= region_span) {
-            // the gap is large enough to move
-            dest_index = gaps[j].start;
-            dest_gap_index = j;
-            break;
-          }
-        }
-
-        log_info(gc)("ruiamzn - checking if origin_index != dest_index");
-
-        if (origin_index != dest_index) {
-          log_info(gc)("ruiamzn - origin_index != dest_index, sliding");
-          origin_start_addr = r->bottom();
-          dest_start_addr = get_region(dest_index)->bottom();
-          set_humongous_forwardee(origin_index, dest_start_addr);
-          for (size_t j = 0; j < region_span; j++) {
-            ShenandoahHeapRegion* dest_region = get_region(dest_index);
-            ShenandoahHeapRegion* origin_region = get_region(origin_index);
-
-            log_info(gc)("ruiamzn - before sliding");
-            origin_region->print_on(&ss);
-            log_info(gc)("Slide src: %s", ss.as_string());
-            ss.reset();
-            dest_region->print_on(&ss);
-            log_info(gc)("Slide dst: %s", ss.as_string());
-
-
-            origin_region->copy_region_to_at_safepoint(dest_region);
-            origin_region->clear_live_data();
-
-            origin_region->print_on(&ss);
-            log_info(gc)("Slide src: %s", ss.as_string());
-            ss.reset();
-            dest_region->print_on(&ss);
-            log_info(gc)("Slide dst: %s", ss.as_string());
-
-          
-            // region size is always aligned with page size
-            dest_index++;
-            origin_index++;
-          }
-          ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_start_addr, (char *)dest_start_addr, region_span * ShenandoahHeapRegion::region_size_bytes());
-          // TODO: Trash the rest of regions if it comes to the end () - do it now or just rely on the exiting flow?
-
-          // Adjust the gap
-          gaps[dest_gap_index].start += region_span;
-          gaps[dest_gap_index].region_count -= region_span;
-        } else {
-          log_info(gc)("ruiamzn - origin_index == dest_index, just updating gaps");
-
-          // origin_index == dest_index. Essentially not move. Just simply increase dest_index. i will increase in the for loop.
-          gaps[gap_count - 1].start = dest_index + region_span;
-          gaps[gap_count - 1].region_count = _num_regions - gaps[gap_count - 1].start;
-          log_info(gc)("ruiamzn - gaps[%zu].start: %zu", gap_count - 1, gaps[gap_count - 1].start);
-          log_info(gc)("ruiamzn - gaps[%zu].region_count: %zu", gap_count - 1, gaps[gap_count - 1].region_count);
-        }
-      } else {
-        log_info(gc)("ruiamzn - dealing with pinned");
-        
-        // if it's pinned, don't move pinned regions. Record the pinned region by adding the end of pinned regions
-        // to gaps
-
-        // Update dest_indices. Add a new one that starts from the pinned region end
-        gaps[gap_count - 1].region_count = i - gaps[gap_count - 1].start;
-
-        // new gap starts from the end of the pinned region
-        gaps[gap_count].start = i + region_span;
-        gaps[gap_count].region_count = _num_regions - gaps[gap_count].start;
-        gap_count++;
+  for (int i = 0; i < _num_regions; i++) {
+    if (get_region(i)->is_h_gap()) {
+      gap_count++;
+      gaps[gap_count - 1].start = i;
+      int length = 0;
+      while (get_region(i)->is_h_gap()) {
+        length++;
+        i++;
       }
-    } else if (!r->is_humongous()) {
-      log_info(gc)("ruiamzn - in (!r->is_humongous())");
-      // The last element of gaps could be humongous. TODO: not clean logic...
-      ShenandoahHeapRegion* r = get_region(gaps[gap_count - 1].start);
-      if (r->is_humongous_start()) {
-        oop obj = cast_to_oop(r->bottom());
-        const size_t region_span = ShenandoahHeapRegion::required_regions(obj->size() * HeapWordSize);
-        gaps[gap_count - 1].start += region_span;
-        gaps[gap_count - 1].region_count -= region_span;
-      }
-
-      // coming to non humongous area. Trash all the remaining gaps
-      ShenandoahHeapLocker locker(lock());
-      for (size_t j = 0; j < gap_count; j++) {
-        // can't just trash the gap span - the last one has gap span to the end of heap. trash to current index i
-        size_t start = gaps[j].start;
-        size_t span = gaps[j].region_count;
-        for (size_t k = 0; k < span && (start + k < i); k++) {
-          // mark it as non active
-          ShenandoahHeapRegion* gap_region = get_region(gaps[j].start + k);
-          if (gap_region->is_humongous()) {
-            log_info(gc)("ruiamzn - making %zu region trash. pin_count: %zu, is_active?: %s, is_humongous_start?: %s, has_live? :%s", 
-              gaps[j].start + k, gap_region->pin_count(), gap_region->is_active() ? "true" : "false", gap_region->is_humongous_start() ? "true" : "false", gap_region->has_live() ? "true" : "false");
-            gap_region->make_trash();
-            marking_context()->_top_at_mark_starts_base[gap_region->index()] = gap_region->top();
-          }
-        }
-      }
-      break;
+      gaps[gap_count - 1].region_count = length;
+      i--; // for loop will increase i - but, do we really need to i--?
+    } else {
+      // skip. do nothing
     }
   }
 
-  FREE_C_HEAP_ARRAY(gaps);
+  // Second run. Sliding
+  // TODO: lilliput v2: possibly need to expand the length
+  for (int i = 0; i < _num_regions; i++) {
+    if (get_region(i)->is_humongous_start() 
+          && get_region(i)->is_slidable()) {
+      // is_slidable is only to check if the original region is not old
+      // We also need to see if the gap can fit the current region
+
+      ShenandoahHeapRegion original_h_start_region = get_region(i);
+      size_t origin_start_addr = original_h_start_region->bottom();
+      oop obj = cast_to_oop(original_h_start_region->bottom());
+      const size_t region_span = ShenandoahHeapRegion::required_regions(obj->size() * HeapWordSize);
+      size_t target_index = find_gap(gaps, region_span);
+
+      if (target_index >= 0) {
+        // slide
+        size_t dest_start_addr = get_region(gaps[target_index].start)->bottom();
+        ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_start_addr, (char *)dest_start_addr, region_span * ShenandoahHeapRegion::region_size_bytes());
+
+        // adjust the gap
+        gaps[target_index].start += region_span;
+        gaps[target_index].region_count -= region_span;
+
+        // trash the original regions. add them into gaps
+        size_t trash_start = (target_index + region_span < i) ? i : target_index + region_span;
+        size_t trash_end = i + region_span;
+        for (int j = trash_start; j < trash_end; j++) {
+          get_region(j)->make_trash();
+          // TODO: do we need to update the marking context?
+        }
+
+      } else {
+        // No available gap for the h region. don't move. skip
+      }
+    }
+  }
 }
+
+// void ShenandoahHeap::sliding_humongous() {
+//   struct Gap {
+//     size_t start;
+//     size_t region_count;
+//   };
+
+//   Gap* gaps = NEW_C_HEAP_ARRAY(Gap, _num_regions, mtGC);
+//   size_t gap_count = 1; // Assume the whole heap is a big gap
+//   gaps[0].start = 0;
+//   gaps[0].region_count = _num_regions;
+
+//   // size_t origin_index = 0;
+//   // size_t dest_index = 0;
+//   HeapWord* origin_start_addr = nullptr; // Should these two be down below?
+//   HeapWord* dest_start_addr = nullptr;
+//   ResourceMark rm;
+//   stringStream ss;
+
+//   // Skip CDS. TODO: there are other states as well. as well as empty uncommitted etc. How do we deal with those regions?
+//   size_t i = 0;
+//   while (i < _num_regions && !get_region(i)->is_humongous()) {
+//     i++;
+//   }
+
+//   gaps[0].start = i;
+//   gaps[0].region_count = _num_regions - i;
+
+//   for (;i < _num_regions; i++) {
+//     ShenandoahHeapRegion* r = get_region(i);
+
+//     if (r->is_humongous_start() && r->has_live()) {
+//       log_info(gc)("ruiamzn - in r->is_humongous_start() && r->has_live(). region: %zu", i);
+
+//       size_t origin_index = i;
+//       oop obj = cast_to_oop(r->bottom());
+//       const size_t region_span = ShenandoahHeapRegion::required_regions(obj->size() * HeapWordSize);
+
+//       if (r->pin_count() == 0) {
+//         log_info(gc)("ruiamzn - region %zu: r->pin_count == 0", i);
+//         // sliding should consider previous empty left over
+//         // Change metadata in ShenandoahHeapRegion
+//         size_t dest_index = i; // worst case: not move
+//         size_t dest_gap_index = _num_regions;
+//         for (size_t j = 0; j < gap_count; j++) {
+//           // assert(gaps[j].start < origin_index)
+//           if (gaps[j].region_count >= region_span) {
+//             // the gap is large enough to move
+//             dest_index = gaps[j].start;
+//             dest_gap_index = j;
+//             break;
+//           }
+//         }
+
+//         log_info(gc)("ruiamzn - checking if origin_index != dest_index");
+
+//         if (origin_index != dest_index) {
+//           log_info(gc)("ruiamzn - origin_index != dest_index, sliding");
+//           origin_start_addr = r->bottom();
+//           dest_start_addr = get_region(dest_index)->bottom();
+//           set_humongous_forwardee(origin_index, dest_start_addr);
+//           for (size_t j = 0; j < region_span; j++) {
+//             ShenandoahHeapRegion* dest_region = get_region(dest_index);
+//             ShenandoahHeapRegion* origin_region = get_region(origin_index);
+
+//             log_info(gc)("ruiamzn - before sliding");
+//             origin_region->print_on(&ss);
+//             log_info(gc)("Slide src: %s", ss.as_string());
+//             ss.reset();
+//             dest_region->print_on(&ss);
+//             log_info(gc)("Slide dst: %s", ss.as_string());
+
+
+//             origin_region->copy_region_to_at_safepoint(dest_region);
+//             origin_region->clear_live_data();
+
+//             origin_region->print_on(&ss);
+//             log_info(gc)("Slide src: %s", ss.as_string());
+//             ss.reset();
+//             dest_region->print_on(&ss);
+//             log_info(gc)("Slide dst: %s", ss.as_string());
+
+          
+//             // region size is always aligned with page size
+//             dest_index++;
+//             origin_index++;
+//           }
+//           ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_start_addr, (char *)dest_start_addr, region_span * ShenandoahHeapRegion::region_size_bytes());
+//           // TODO: Trash the rest of regions if it comes to the end () - do it now or just rely on the exiting flow?
+
+//           // Adjust the gap
+//           gaps[dest_gap_index].start += region_span;
+//           gaps[dest_gap_index].region_count -= region_span;
+//         } else {
+//           log_info(gc)("ruiamzn - origin_index == dest_index, just updating gaps");
+
+//           // origin_index == dest_index. Essentially not move. Just simply increase dest_index. i will increase in the for loop.
+//           gaps[gap_count - 1].start = dest_index + region_span;
+//           gaps[gap_count - 1].region_count = _num_regions - gaps[gap_count - 1].start;
+//           log_info(gc)("ruiamzn - gaps[%zu].start: %zu", gap_count - 1, gaps[gap_count - 1].start);
+//           log_info(gc)("ruiamzn - gaps[%zu].region_count: %zu", gap_count - 1, gaps[gap_count - 1].region_count);
+//         }
+//       } else {
+//         log_info(gc)("ruiamzn - dealing with pinned");
+        
+//         // if it's pinned, don't move pinned regions. Record the pinned region by adding the end of pinned regions
+//         // to gaps
+
+//         // Update dest_indices. Add a new one that starts from the pinned region end
+//         gaps[gap_count - 1].region_count = i - gaps[gap_count - 1].start;
+
+//         // new gap starts from the end of the pinned region
+//         gaps[gap_count].start = i + region_span;
+//         gaps[gap_count].region_count = _num_regions - gaps[gap_count].start;
+//         gap_count++;
+//       }
+//     } else if (!r->is_humongous()) {
+//       log_info(gc)("ruiamzn - in (!r->is_humongous())");
+//       // The last element of gaps could be humongous. TODO: not clean logic...
+//       ShenandoahHeapRegion* r = get_region(gaps[gap_count - 1].start);
+//       if (r->is_humongous_start()) {
+//         oop obj = cast_to_oop(r->bottom());
+//         const size_t region_span = ShenandoahHeapRegion::required_regions(obj->size() * HeapWordSize);
+//         gaps[gap_count - 1].start += region_span;
+//         gaps[gap_count - 1].region_count -= region_span;
+//       }
+
+//       // coming to non humongous area. Trash all the remaining gaps
+//       ShenandoahHeapLocker locker(lock());
+//       for (size_t j = 0; j < gap_count; j++) {
+//         // can't just trash the gap span - the last one has gap span to the end of heap. trash to current index i
+//         size_t start = gaps[j].start;
+//         size_t span = gaps[j].region_count;
+//         for (size_t k = 0; k < span && (start + k < i); k++) {
+//           // mark it as non active
+//           ShenandoahHeapRegion* gap_region = get_region(gaps[j].start + k);
+//           if (gap_region->is_humongous()) {
+//             log_info(gc)("ruiamzn - making %zu region trash. pin_count: %zu, is_active?: %s, is_humongous_start?: %s, has_live? :%s", 
+//               gaps[j].start + k, gap_region->pin_count(), gap_region->is_active() ? "true" : "false", gap_region->is_humongous_start() ? "true" : "false", gap_region->has_live() ? "true" : "false");
+//             gap_region->make_trash();
+//             marking_context()->_top_at_mark_starts_base[gap_region->index()] = gap_region->top();
+//           }
+//         }
+//       }
+//       break;
+//     }
+//   }
+
+//   FREE_C_HEAP_ARRAY(gaps);
+// }
 
 void ShenandoahHeap::finish_concurrent_roots() {
   assert(SafepointSynchronize::is_at_safepoint(), "Must be at a safepoint");
