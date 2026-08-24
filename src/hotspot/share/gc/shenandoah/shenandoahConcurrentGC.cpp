@@ -815,7 +815,7 @@ void ShenandoahConcurrentGC::op_final_mark() {
     // TODO: assume, that regular and humongous never met
     heap->sliding_humongous();
 
-    heap->rebuild_free_set(true /*concurrent*/);
+    heap->rebuild_free_set_within_phase(); // TODO: eh, can't call rebuild_free_set
 
     // Has to be done after cset selection
     heap->prepare_concurrent_roots();

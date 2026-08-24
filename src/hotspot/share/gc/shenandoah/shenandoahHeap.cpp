@@ -2574,16 +2574,33 @@ void ShenandoahHeap::sliding_humongous() {
 
       if (target_index >= 0 && gaps[target_index].start < i) {
         // slide
+        size_t dest_start = gaps[target_index].start;
         HeapWord* dest_start_addr = get_region(gaps[target_index].start)->bottom();
-        ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_start_addr, (char *)dest_start_addr, region_span * ShenandoahHeapRegion::region_size_bytes());
+        if (dest_start + region_span <= i) {
+          // no overlap
+          ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_start_addr, (char *)dest_start_addr, region_span * ShenandoahHeapRegion::region_size_bytes());
+        } else {
+          // has overlap, mremap does not support overlap remap. Split by region and remap
+          for (size_t j = 0; j < region_span; j++) {
+              HeapWord* dest_addr = get_region(dest_start + j)->bottom();
+              HeapWord* origin_addr = get_region(i + j)->bottom();
+              ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_addr, (char *)dest_addr, ShenandoahHeapRegion::region_size_bytes());
+          }
+        }
+
         set_humongous_forwardee(i, dest_start_addr); // TODO: at some point, we need to clean the forwardee, right?
         slid = true;
         // TODO: probably need to make destination properties to be humongous
 
-        size_t dest_start = gaps[target_index].start;
         // adjust the gap
-        gaps[target_index].start += region_span;
-        gaps[target_index].region_count -= region_span;
+        // TODO: one situation: the tail of the source object is also a gap. Need to connect these two. Possibly, just set the latter to region_span = 0 and only keep the first
+        if (dest_start + region_span <= i) {
+          gaps[target_index].start += region_span;
+          gaps[target_index].region_count -= region_span;
+        } else {
+          // has overlap. gap start moves, but the gap region_count stays the same
+          gaps[target_index].start += region_span; // TODO: to fix - reclaim would have issue if overlap - start is h_cont rather than h_start
+        }
 
         stringStream ss;
 
@@ -2600,6 +2617,7 @@ void ShenandoahHeap::sliding_humongous() {
           log_info(gc)("Slide dst: %s", ss.as_string());
 
           origin_region->copy_region_to_at_safepoint(dest_region);
+          dest_region->set_affiliation(origin_region->affiliation());
           origin_region->clear_live_data();
 
           origin_region->print_on(&ss);
@@ -2635,11 +2653,12 @@ void ShenandoahHeap::trash_slid_humongous_sources() {
 
 ssize_t ShenandoahHeap::find_gap(Gap* gaps, size_t gap_count, size_t region_span, size_t source_start) {
   for (size_t i = 0; i < gap_count; i++) {
-    // TODO: have to skip overlap for now. Can use small off heap memory as a stash space to transfer
-    if (gaps[i].start + region_span > source_start) {
+    if (gaps[i].start >= source_start) {
       break;
     }
     if (gaps[i].region_count >= region_span) {
+      return (ssize_t) i;
+    } else if (gaps[i].start + gaps[i].region_count == source_start) {
       return (ssize_t) i;
     }
   }
