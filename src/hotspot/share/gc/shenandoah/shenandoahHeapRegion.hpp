@@ -212,6 +212,10 @@ public:
   bool is_cset()                   const { auto cur_state = state(); return cur_state == _cset || cur_state == _pinned_cset; }
   bool is_pinned()                 const { auto cur_state = state(); return cur_state == _pinned || cur_state == _pinned_cset || cur_state == _pinned_humongous_start; }
   bool is_regular_or_regular_pinned() const { auto cur_state = state(); return cur_state == _regular || cur_state == _pinned; }
+  bool is_humongous_gap()          const { 
+    return is_empty_committed();
+  } // TODO: can it be trash? make it as a follow up
+  bool is_slidable()  const {  assert (is_humongous_start(), "Only check to slide for humongous start regions"); return !is_pinned() && !is_old(); } // TODO: young only for now. 
 
   inline bool is_young() const;
   inline bool is_old() const;

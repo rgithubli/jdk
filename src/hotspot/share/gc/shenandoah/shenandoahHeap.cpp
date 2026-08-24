@@ -409,6 +409,8 @@ jint ShenandoahHeap::initialize() {
                                             cset_rs.size(), cset_rs.page_size());
     _humongous_forwarding_table = NEW_C_HEAP_ARRAY(HeapWord*, _num_regions, mtGC);
     reset_humongous_forwarding_table();
+    _slid_humongous_sources = NEW_C_HEAP_ARRAY(size_t, _num_regions, mtGC);
+    _slid_humongous_count = 0;
   }
 
   _regions = NEW_C_HEAP_ARRAY(ShenandoahHeapRegion*, _num_regions, mtGC);
@@ -2535,66 +2537,113 @@ void ShenandoahHeap::sliding_humongous() {
   // TODO: two runs for now. can do it in one run
   // TODO: needs to be 
   // First run: find all the gaps
-  struct Gap {
-    size_t start;
-    size_t region_count;
-  };
 
   Gap* gaps = NEW_C_HEAP_ARRAY(Gap, _num_regions, mtGC);
   size_t gap_count = 0; // Assume the whole heap is a big gap
+  _slid_humongous_count = 0;
 
-  for (int i = 0; i < _num_regions; i++) {
-    if (get_region(i)->is_h_gap()) {
+  for (size_t i = 0; i < _num_regions; i++) {
+    if (get_region(i)->is_humongous_gap() && _free_set->membership(i) == ShenandoahFreeSetPartitionId::Mutator) { // TODO: is_humongous_gap doesn't have freeset..
       gap_count++;
       gaps[gap_count - 1].start = i;
-      int length = 0;
-      while (get_region(i)->is_h_gap()) {
+      size_t length = 0;
+      while (i < _num_regions && get_region(i)->is_humongous_gap() && _free_set->membership(i) == ShenandoahFreeSetPartitionId::Mutator) {
         length++;
         i++;
       }
       gaps[gap_count - 1].region_count = length;
-      i--; // for loop will increase i - but, do we really need to i--?
     } else {
       // skip. do nothing
     }
   }
 
+  bool slid = false;
   // Second run. Sliding
   // TODO: lilliput v2: possibly need to expand the length
-  for (int i = 0; i < _num_regions; i++) {
+  for (size_t i = 0; i < _num_regions; i++) {
     if (get_region(i)->is_humongous_start() 
           && get_region(i)->is_slidable()) {
       // is_slidable is only to check if the original region is not old
       // We also need to see if the gap can fit the current region
 
-      ShenandoahHeapRegion original_h_start_region = get_region(i);
-      size_t origin_start_addr = original_h_start_region->bottom();
+      ShenandoahHeapRegion* original_h_start_region = get_region(i);
+      HeapWord* origin_start_addr = original_h_start_region->bottom();
       oop obj = cast_to_oop(original_h_start_region->bottom());
       const size_t region_span = ShenandoahHeapRegion::required_regions(obj->size() * HeapWordSize);
-      size_t target_index = find_gap(gaps, region_span);
+      ssize_t target_index = find_gap(gaps, gap_count, region_span, i);
 
-      if (target_index >= 0) {
+      if (target_index >= 0 && gaps[target_index].start < i) {
         // slide
-        size_t dest_start_addr = get_region(gaps[target_index].start)->bottom();
+        HeapWord* dest_start_addr = get_region(gaps[target_index].start)->bottom();
         ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_start_addr, (char *)dest_start_addr, region_span * ShenandoahHeapRegion::region_size_bytes());
+        set_humongous_forwardee(i, dest_start_addr); // TODO: at some point, we need to clean the forwardee, right?
+        slid = true;
+        // TODO: probably need to make destination properties to be humongous
 
+        size_t dest_start = gaps[target_index].start;
         // adjust the gap
         gaps[target_index].start += region_span;
         gaps[target_index].region_count -= region_span;
 
-        // trash the original regions. add them into gaps
-        size_t trash_start = (target_index + region_span < i) ? i : target_index + region_span;
-        size_t trash_end = i + region_span;
-        for (int j = trash_start; j < trash_end; j++) {
-          get_region(j)->make_trash();
-          // TODO: do we need to update the marking context?
+        stringStream ss;
+
+        // set the properties the same
+        for (size_t j = 0; j < region_span; j++) {
+          ShenandoahHeapRegion* dest_region = get_region(dest_start + j);
+          ShenandoahHeapRegion* origin_region = get_region(i + j);
+
+          log_info(gc)("ruiamzn - before sliding");
+          origin_region->print_on(&ss);
+          log_info(gc)("Slide src: %s", ss.as_string());
+          ss.reset();
+          dest_region->print_on(&ss);
+          log_info(gc)("Slide dst: %s", ss.as_string());
+
+          origin_region->copy_region_to_at_safepoint(dest_region);
+          origin_region->clear_live_data();
+
+          origin_region->print_on(&ss);
+          log_info(gc)("Slide src: %s", ss.as_string());
+          ss.reset();
+          dest_region->print_on(&ss);
+          log_info(gc)("Slide dst: %s", ss.as_string());
         }
+
+        // As for the source regions, leave them as humongous in _regions for now before the refs are fixed
+        _slid_humongous_sources[_slid_humongous_count++] = i;
 
       } else {
         // No available gap for the h region. don't move. skip
       }
     }
   }
+  if (slid) {
+    set_has_forwarded_objects(true);
+  }
+
+  FREE_C_HEAP_ARRAY(gaps);
+}
+
+void ShenandoahHeap::trash_slid_humongous_sources() {
+  for (size_t k = 0; k < _slid_humongous_count; k++) {
+    ShenandoahHeapRegion* start = get_region(_slid_humongous_sources[k]);
+    trash_humongous_region_at(start);   // trashes the start + all its continuations
+  }
+  _slid_humongous_count = 0;
+  reset_humongous_forwarding_table();
+}
+
+ssize_t ShenandoahHeap::find_gap(Gap* gaps, size_t gap_count, size_t region_span, size_t source_start) {
+  for (size_t i = 0; i < gap_count; i++) {
+    // TODO: have to skip overlap for now. Can use small off heap memory as a stash space to transfer
+    if (gaps[i].start + region_span > source_start) {
+      break;
+    }
+    if (gaps[i].region_count >= region_span) {
+      return (ssize_t) i;
+    }
+  }
+  return -1;
 }
 
 // void ShenandoahHeap::sliding_humongous() {

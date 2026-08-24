@@ -136,6 +136,11 @@ public:
 
 typedef Stack<oop, mtGC>                     ShenandoahScanObjectStack;
 
+struct Gap {
+  size_t start;
+  size_t region_count;
+};
+
 // Shenandoah GC is low-pause concurrent GC that uses a load reference barrier
 // for concurent evacuation and a snapshot-at-the-beginning write barrier for
 // concurrent marking. See ShenandoahControlThread for GC cycle structure.
@@ -289,6 +294,8 @@ private:
   ShenandoahHeapRegion** _regions;
   uint8_t* _affiliations;       // Holds array of enum ShenandoahAffiliation, including FREE status in non-generational mode
   HeapWord** _humongous_forwarding_table;
+  size_t* _slid_humongous_sources;
+  size_t  _slid_humongous_count;
 
 public:
 
@@ -498,6 +505,8 @@ private:
   void prepare_concurrent_roots();
 
   void sliding_humongous();
+  void trash_slid_humongous_sources();
+  ssize_t find_gap(Gap* gaps, size_t gap_count, size_t region_span, size_t source_start);
   void finish_concurrent_roots();
   // Concurrent class unloading support
   void do_class_unloading();

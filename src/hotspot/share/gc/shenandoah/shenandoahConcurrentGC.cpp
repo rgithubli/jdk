@@ -815,6 +815,8 @@ void ShenandoahConcurrentGC::op_final_mark() {
     // TODO: assume, that regular and humongous never met
     heap->sliding_humongous();
 
+    heap->rebuild_free_set(true /*concurrent*/);
+
     // Has to be done after cset selection
     heap->prepare_concurrent_roots();
 
@@ -1239,6 +1241,7 @@ void ShenandoahConcurrentGC::op_final_update_refs() {
 
   heap->set_update_refs_in_progress(false);
   heap->set_has_forwarded_objects(false);
+  heap->trash_slid_humongous_sources();
 
   if (ShenandoahVerify) {
     ShenandoahTimingsTracker v(ShenandoahPhaseTimings::final_update_refs_verify);
