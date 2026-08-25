@@ -322,6 +322,12 @@ public:
     return _used[int(which_partition)];
   }
 
+  inline void set_humongous_waste(ShenandoahFreeSetPartitionId which_partition, size_t bytes) {
+    // TODO: lock or not lock?
+    shenandoah_assert_heaplocked();
+    assert (which_partition < NumPartitions, "Partition must be valid");
+    _humongous_waste[int(which_partition)] = bytes;
+  }
   inline void increase_humongous_waste(ShenandoahFreeSetPartitionId which_partition, size_t bytes);
   inline void decrease_humongous_waste(ShenandoahFreeSetPartitionId which_partition, size_t bytes) {
     shenandoah_assert_heaplocked();
@@ -820,6 +826,8 @@ public:
   }
 
   void decrease_humongous_waste_for_regular_bypass(ShenandoahHeapRegion* r, size_t waste);
+
+  void recompute_humongous_waste_after_slide();
 
   /*
    * Internal fragmentation metric: describes how fragmented the heap regions are.

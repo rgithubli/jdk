@@ -2960,6 +2960,30 @@ void ShenandoahFreeSet::decrease_humongous_waste_for_regular_bypass(ShenandoahHe
   _total_humongous_waste -= waste;
 }
 
+void ShenandoahFreeSet::recompute_humongous_waste_after_slide() {
+  shenandoah_assert_heaplocked();
+  size_t mutator_waste = 0;
+  size_t old_waste = 0;
+  for (size_t i = 0; i < _heap->num_regions(); i++) {
+    if (_partitions.membership(i) != ShenandoahFreeSetPartitionId::NotFree) {
+      continue;
+    }
+    ShenandoahHeapRegion* r = _heap->get_region(i);
+    if (!r->is_humongous()) {
+      continue;
+    }
+    size_t capacity = alloc_capacity(i);
+    if (r->is_old()) {
+      old_waste += capacity;
+    } else {
+      mutator_waste += capacity;
+    }
+  }
+  _partitions.set_humongous_waste(ShenandoahFreeSetPartitionId::Mutator, mutator_waste);
+  _partitions.set_humongous_waste(ShenandoahFreeSetPartitionId::OldCollector, old_waste);
+  _total_humongous_waste = mutator_waste + old_waste;
+}
+
 void ShenandoahFreeSet::print_on(outputStream* out) const {
   out->print_cr("Mutator Free Set: %zu", _partitions.count(ShenandoahFreeSetPartitionId::Mutator));
   ShenandoahLeftRightIterator mutator(const_cast<ShenandoahRegionPartitions*>(&_partitions), ShenandoahFreeSetPartitionId::Mutator);

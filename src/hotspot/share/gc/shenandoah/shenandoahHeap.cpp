@@ -2636,7 +2636,11 @@ void ShenandoahHeap::sliding_humongous() {
     }
   }
   if (slid) {
-    set_has_forwarded_objects(true);
+    // set_has_forwarded_objects(true);
+    {
+      ShenandoahHeapLocker locker(lock());
+      free_set()->recompute_humongous_waste_after_slide();
+    }
   }
 
   FREE_C_HEAP_ARRAY(gaps);

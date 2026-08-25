@@ -456,6 +456,10 @@ inline bool ShenandoahHeap::has_forwarded_objects() const {
   return is_gc_state(HAS_FORWARDED);
 }
 
+inline bool ShenandoahHeap::has_slid_humongous() const {
+  return _slid_humongous_count > 0;
+}
+
 inline bool ShenandoahHeap::is_concurrent_mark_in_progress() const {
   return is_gc_state(MARKING);
 }

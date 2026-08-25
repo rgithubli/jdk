@@ -593,6 +593,10 @@ void ShenandoahHeapRegion::copy_region_to_at_safepoint(ShenandoahHeapRegion* des
   size_t tams_offset = src_tams - this->bottom();
   ctx->_top_at_mark_starts_base[dest->index()] = dest->bottom() + tams_offset;
 
+  // ..and top_bitmap
+  HeapWord* source_top_bitmap = ctx->top_bitmap(this);
+  ctx->_top_bitmaps[dest->index()] = dest->bottom() + (source_top_bitmap - this->bottom());
+
   // ..and bitmap. TODO: Currently this only works for h regions
   if (is_humongous_start()) {
     if (ctx->is_marked_strong(src_bottom)) {
