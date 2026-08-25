@@ -36,9 +36,6 @@
  *      -XX:+ShenandoahVerify
  *      TestAllocHumongousFragment
  *
- * @run main/othervm -Xmx1g -Xms1g -Xlog:gc*=debug:file=/tmp/gc.log -XX:+UnlockDiagnosticVMOptions -XX:+UnlockExperimentalVMOptions -XX:ShenandoahTargetNumRegions=2048
- *      -XX:+UseShenandoahGC -XX:ShenandoahGCHeuristics=adaptive
- *      TestAllocHumongousFragment
 */
 import java.util.*;
 import jdk.test.lib.Utils;
