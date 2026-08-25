@@ -2534,9 +2534,9 @@ void ShenandoahHeap::prepare_concurrent_roots() {
 }
 
 void ShenandoahHeap::sliding_humongous() {
-  // TODO: two runs for now. can do it in one run
-  // TODO: needs to be 
+  // TODO: two runs for now. can probably do it in one run?
   // First run: find all the gaps
+  // Second run: slide
 
   Gap* gaps = NEW_C_HEAP_ARRAY(Gap, _num_regions, mtGC);
   size_t gap_count = 0; // Assume the whole heap is a big gap

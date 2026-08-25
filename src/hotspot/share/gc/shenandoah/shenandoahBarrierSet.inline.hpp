@@ -106,6 +106,8 @@ inline oop ShenandoahBarrierSet::load_reference_barrier(oop obj) {
   }
   if (_heap->has_forwarded_objects()) {
     shenandoah_assert_in_heap_bounds_or_null(nullptr, obj);
+    // TODO: this is probably wrong? cset could be empty but it's possible that we slide the h regions
+    // Should pull this out?
     HeapWord* forwardee = _heap->humongous_forwardee(_heap->heap_region_index_containing(obj));
     if (forwardee != nullptr) {
       return cast_to_oop(forwardee);
