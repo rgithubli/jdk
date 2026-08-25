@@ -100,6 +100,7 @@ inline oop ShenandoahBarrierSet::load_reference_barrier_mutator(oop obj, T* load
   return fwd;
 }
 
+// TODO: dissembler, c1, c2. Adjust cset to include h regions
 inline oop ShenandoahBarrierSet::load_reference_barrier(oop obj) {
   if (!ShenandoahLoadRefBarrier) { // TODO: if LRB is not enabled, we can't have humongous sliding
     return obj;

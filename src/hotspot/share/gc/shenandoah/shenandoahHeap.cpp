@@ -2560,6 +2560,7 @@ void ShenandoahHeap::sliding_humongous() {
   bool slid = false;
   // Second run. Sliding
   // TODO: lilliput v2: possibly need to expand the length
+  // try expand h regions at allocation time?
   for (size_t i = 0; i < _num_regions; i++) {
     if (get_region(i)->is_humongous_start() 
           && get_region(i)->is_slidable()) {
@@ -2577,7 +2578,6 @@ void ShenandoahHeap::sliding_humongous() {
         size_t dest_start = gaps[target_index].start;
         HeapWord* dest_start_addr = get_region(gaps[target_index].start)->bottom();
         if (dest_start + region_span <= i) {
-          // no overlap
           ShenandoahPhysicalMemoryManager::remap_virt((char *)origin_start_addr, (char *)dest_start_addr, region_span * ShenandoahHeapRegion::region_size_bytes());
         } else {
           // has overlap, mremap does not support overlap remap. Split by region and remap

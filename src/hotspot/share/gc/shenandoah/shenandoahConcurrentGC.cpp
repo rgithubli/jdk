@@ -813,7 +813,7 @@ void ShenandoahConcurrentGC::op_final_mark() {
     _generation->prepare_regions_and_collection_set(true /*concurrent*/);
 
     // TODO: assume, that regular and humongous never met
-    heap->sliding_humongous();
+    heap->sliding_humongous(); // TODO: signal - h allocation failure
 
     heap->rebuild_free_set_within_phase(); // TODO: eh, can't call rebuild_free_set
 
